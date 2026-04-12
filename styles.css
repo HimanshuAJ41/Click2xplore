@@ -172,14 +172,17 @@ body {
 /* Navigation */
 .nav-menu {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    max-width: min(520px, 52vw);
 }
 
 .nav-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
+    gap: 6px;
+    padding: 8px 12px;
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-lg);
@@ -200,6 +203,18 @@ body {
     color: var(--text-primary);
     background: rgba(99, 102, 241, 0.2);
     border-color: var(--primary);
+}
+
+.nav-btn.active[data-view="street"] {
+    background: rgba(56, 189, 248, 0.16);
+    border-color: rgba(56, 189, 248, 0.5);
+    color: #e0f7ff;
+}
+
+.nav-btn.active[data-view="terrain"] {
+    background: rgba(52, 168, 83, 0.18);
+    border-color: rgba(52, 168, 83, 0.55);
+    color: #e8f5e9;
 }
 
 .nav-icon {
@@ -353,6 +368,23 @@ body {
 }
 .ddown-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
 .ddown-btn.active { background: rgba(99,102,241,0.2); border-color: var(--primary); color: var(--text-primary); }
+.ddown-btn.active[data-view="street"] {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: rgba(56, 189, 248, 0.45);
+    color: #e0f7ff;
+}
+
+.ddown-btn.active[data-view="terrain"] {
+    background: rgba(52, 168, 83, 0.2);
+    border-color: rgba(52, 168, 83, 0.5);
+    color: #e8f5e9;
+}
+
+.dropdown-row-views {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
 
 .ddown-icon-btn {
     display: flex;
@@ -510,6 +542,14 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
+}
+
+/* Terrain map mode: soft vignette + crisp edge (maps-app polish) */
+.app-container[data-map-view="street"] .globe-container,
+.app-container[data-map-view="terrain"] .globe-container {
+    box-shadow:
+        inset 0 0 100px rgba(15, 40, 25, 0.22),
+        inset 0 -40px 80px rgba(0, 0, 0, 0.12);
 }
 
 /* Remove Cesium credits bar styling (you can show/hide as needed) */
@@ -1577,8 +1617,26 @@ body {
 }
 
 .footer-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0 6px;
     font-size: 0.8rem;
     color: var(--text-muted);
+    max-width: min(420px, 42vw);
+    text-align: right;
+    line-height: 1.35;
+}
+
+.basemap-attrib {
+    font-size: 0.72em;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 400;
+}
+
+.basemap-attrib:empty {
+    display: none;
 }
 
 /* ========================================
@@ -2167,6 +2225,19 @@ body {
     .footer { height: 42px; font-size: 0.7rem; padding: 0 10px; }
     .location-name-live { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .footer-info { display: none; }
+    .app-container[data-map-view="street"] .footer-info,
+    .app-container[data-map-view="terrain"] .footer-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        max-width: 48%;
+        font-size: 0.52rem;
+        gap: 0;
+    }
+    .app-container[data-map-view="street"] .footer-info .footer-powered,
+    .app-container[data-map-view="terrain"] .footer-info .footer-powered {
+        display: none;
+    }
 
     /* Loading screen */
     .loading-text { font-size: 1.2rem; }
@@ -2203,4 +2274,79 @@ body {
     .nav-panel { max-height: 90vh; }
     .nav-body.expanded { max-height: 75vh; }
 }
-
+
+/* ── Elevation Chart ─────────────────────────────────────────────── */
+.elevation-chart {
+    margin: 8px 16px;
+    padding: 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.elev-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 6px;
+}
+.elev-range { font-weight: 600; color: #4285F4; }
+.elev-svg {
+    width: 100%;
+    height: 50px;
+    display: block;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* ── Route Extras (ascent/descent) ──────────────────────────────── */
+.route-extras {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 0 12px;
+    font-size: 11px;
+}
+.route-extra-item { color: rgba(255,255,255,0.6); }
+
+/* ── Route Warning ───────────────────────────────────────────────── */
+.route-warning {
+    margin: 6px 12px 0;
+    padding: 6px 10px;
+    background: rgba(245,158,11,0.15);
+    border-left: 3px solid #F59E0B;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #F59E0B;
+}
+
+/* ── Avoid Options Row ───────────────────────────────────────────── */
+.nav-avoid-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 16px 8px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.avoid-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    margin-right: 2px;
+}
+.avoid-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    padding: 3px 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    transition: background 0.2s, border-color 0.2s;
+}
+.avoid-chip:hover { background: rgba(66,133,244,0.2); border-color: #4285F4; }
+.avoid-chip input { margin: 0; accent-color: #4285F4; cursor: pointer; }
+

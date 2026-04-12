@@ -1,8 +1,11 @@
 /**
- * Click2Xplore — Navigation System v3
- * Algorithm: OSRM (Contraction Hierarchies — fastest shortest-path)
- * Features: multi-route, waypoints, pick-on-map, real-time tracking
+ * Click2Xplore — Navigation System v4
+ * Algorithm: OpenRouteService (primary) with OSRM fallback
+ * Features: waypoints, pick-on-map, real-time tracking, elevation (ORS),
+ *           avoid options (driving). Modes: car, bike, walk only (real routing).
  * UX: Google Maps-style — non-blocking, smooth, mobile-first bottom-sheet
+ *
+ * ORS API Key: https://openrouteservice.org/dev/#/signup (free: 2000 req/day)
  */
 
 class NavigationSystem {
@@ -30,12 +33,17 @@ class NavigationSystem {
         this.waypoints = [];
         this.pickOverlay = null;
         this._panelExpanded = false;
+        // ── ORS Configuration ─────────────────────────────────────────────
+        // Replace 'YOUR_FREE_ORS_KEY' with your key from:
+        // https://openrouteservice.org/dev/#/signup  (free: 2000 req/day, 40 req/min)
+        this.ORS_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjJmYjIxZTIzYTQ4OTRkY2Y5ZDVmYjQ5MmU3YmRjZjM0IiwiaCI6Im11cm11cjY0In0=';
+        this.ORS_BASE = 'https://api.openrouteservice.org/v2/directions';
+        // ─────────────────────────────────────────────────────────────────
+
         this.profiles = {
-            driving: { label: '🚗 Car',   osrm: 'driving', speed: 40 },
-            cycling: { label: '🚲 Bike',  osrm: 'cycling', speed: 15 },
-            walking: { label: '🚶 Walk',  osrm: 'foot',    speed: 5  },
-            train:   { label: '🚆 Train', osrm: null,      speed: 60 },
-            bus:     { label: '🚌 Bus',   osrm: null,      speed: 25 },
+            driving: { label: '🚗 Car', ors: 'driving-car', speed: 40, color: '#4285F4', alternatives: true },
+            cycling: { label: '🚲 Bike', ors: 'cycling-regular', speed: 15, color: '#34A853', alternatives: false },
+            walking: { label: '🚶 Walk', ors: 'foot-walking', speed: 5, color: '#FF6B35', alternatives: false },
         };
         this.init();
     }
@@ -154,8 +162,14 @@ class NavigationSystem {
                     <button class="mode-btn active" data-mode="driving">🚗<span>Car</span></button>
                     <button class="mode-btn" data-mode="cycling">🚲<span>Bike</span></button>
                     <button class="mode-btn" data-mode="walking">🚶<span>Walk</span></button>
-                    <button class="mode-btn" data-mode="train">🚆<span>Train</span></button>
-                    <button class="mode-btn" data-mode="bus">🚌<span>Bus</span></button>
+                </div>
+
+                <!-- Avoid options (shown for driving/cycling) -->
+                <div class="nav-avoid-row" id="nav-avoid-row" style="display:none">
+                    <span class="avoid-label">Avoid:</span>
+                    <label class="avoid-chip"><input type="checkbox" id="avoid-tolls"> Tolls</label>
+                    <label class="avoid-chip"><input type="checkbox" id="avoid-highways"> Highways</label>
+                    <label class="avoid-chip"><input type="checkbox" id="avoid-ferries"> Ferries</label>
                 </div>
 
                 <!-- Route calculation status -->
@@ -200,6 +214,16 @@ class NavigationSystem {
                 panel.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.selectedMode = btn.dataset.mode;
+                // Show avoid options only for driving / cycling
+                const avoidRow = panel.querySelector('#nav-avoid-row');
+                avoidRow.style.display = ['driving', 'cycling'].includes(btn.dataset.mode) ? 'flex' : 'none';
+                if (this.destLat) this.fetchRoute();
+            });
+        });
+
+        // Recalculate route when avoid options change
+        ['avoid-tolls', 'avoid-highways', 'avoid-ferries'].forEach(id => {
+            panel.querySelector(`#${id}`)?.addEventListener('change', () => {
                 if (this.destLat) this.fetchRoute();
             });
         });
@@ -388,18 +412,21 @@ class NavigationSystem {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // Route Fetching
+    // Route Fetching — OpenRouteService primary, OSRM fallback
     // ═══════════════════════════════════════════════════════════
     async fetchRoute() {
-        const info     = this.navPanel.querySelector('#nav-route-info');
-        const steps    = this.navPanel.querySelector('#nav-steps');
-        const pois     = this.navPanel.querySelector('#nav-pois');
+        const info = this.navPanel.querySelector('#nav-route-info');
+        const steps = this.navPanel.querySelector('#nav-steps');
+        const pois = this.navPanel.querySelector('#nav-pois');
         const routesList = this.navPanel.querySelector('#nav-routes-list');
 
         info.innerHTML = '<div class="nav-loading"><div class="spinner"></div> Calculating routes…</div>';
         steps.innerHTML = '';
         pois.innerHTML = '';
         routesList.innerHTML = '';
+
+        // Remove any stale elevation chart
+        this.navPanel.querySelector('#elevation-chart')?.remove();
 
         if (!this.startLat || !this.destLat) {
             info.innerHTML = '<p class="route-note">Set both start and destination to calculate route.</p>';
@@ -410,17 +437,142 @@ class NavigationSystem {
         this.updateModeAvailability(straightDist);
 
         const profile = this.profiles[this.selectedMode];
+        if (!profile) {
+            this.selectedMode = 'driving';
+            return this.fetchRoute();
+        }
 
-        if (!profile.osrm) {
-            this.showEstimatedRoute(profile);
+        // If ORS key is still the placeholder, skip straight to OSRM fallback
+        if (this.ORS_KEY === 'YOUR_FREE_ORS_KEY') {
+            await this.fetchRouteOSRMFallback(profile);
             return;
         }
 
         try {
-            const coords = this.buildCoordinateString();
-            const url = `https://router.project-osrm.org/route/v1/${profile.osrm}/${coords}` +
-                `?overview=full&geometries=geojson&steps=true&alternatives=true`;
+            // Build coordinates [[lon,lat], ...]
+            const coordinates = [[this.startLon, this.startLat]];
+            this.waypoints.forEach(wp => { if (wp.lat && wp.lon) coordinates.push([wp.lon, wp.lat]); });
+            coordinates.push([this.destLon, this.destLat]);
 
+            const body = {
+                coordinates,
+                elevation: true,
+                instructions: true,
+                instructions_format: 'text',
+                language: 'en',
+                units: 'km'
+            };
+
+            // Only driving asks for alternate paths — bike/walk use a single best path so
+            // the line on the map always matches the selected mode (no extra “ghost” routes).
+            if (profile.alternatives) {
+                body.alternative_routes = { target_count: 1, weight_factor: 1.45 };
+            }
+
+            // Build avoid_features from checkboxes
+            const avoidFeatures = [];
+            if (this.navPanel.querySelector('#avoid-tolls')?.checked) avoidFeatures.push('tollways');
+            if (this.navPanel.querySelector('#avoid-highways')?.checked) avoidFeatures.push('highways');
+            if (this.navPanel.querySelector('#avoid-ferries')?.checked) avoidFeatures.push('ferries');
+            if (avoidFeatures.length > 0) {
+                body.options = body.options || {};
+                body.options.avoid_features = avoidFeatures;
+            }
+
+            const response = await fetch(`${this.ORS_BASE}/${profile.ors}/geojson`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': this.ORS_KEY,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, application/geo+json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error('ORS error:', errText);
+                await this.fetchRouteOSRMFallback(profile);
+                return;
+            }
+
+            const geojson = await response.json();
+            let features = geojson.features || [];
+
+            if (!features.length) {
+                info.innerHTML = '<p class="route-error">❌ No route found. Try a different mode.</p>';
+                return;
+            }
+
+            // Bike/walk: use one route only (ORS may still return extras in edge cases).
+            if (!profile.alternatives) {
+                features = features.slice(0, 1);
+            }
+
+            // Convert ORS GeoJSON features to internal route objects
+            this.currentRoutes = features.map(f => ({
+                distance: f.properties.summary.distance * 1000, // ORS returns km, convert to m
+                duration: f.properties.summary.duration,
+                geometry: f.geometry,
+                legs: [{
+                    steps: (f.properties.segments?.[0]?.steps || []).map(s => ({
+                        name: s.name || '',
+                        distance: s.distance * 1000,
+                        duration: s.duration,
+                        maneuver: {
+                            type: this._orsInstructionType(s.type),
+                            modifier: s.instruction || ''
+                        }
+                    }))
+                }],
+                // ORS-specific extras
+                ascent: f.properties.ascent,
+                descent: f.properties.descent,
+                warnings: f.properties.warnings || []
+            }));
+
+            this.selectedRouteIdx = 0;
+
+            this.renderRouteOptions(this.currentRoutes, profile);
+            this.showRouteDetails(0, profile);
+            this.drawAllRoutes(this.currentRoutes, profile);
+
+            this.navPanel.querySelector('#start-nav-btn').style.display = 'block';
+            this._updateCollapsedSummary(this.currentRoutes[0], profile);
+
+            // Elevation profile (only when 3D coordinates are available)
+            if (features[0].geometry.coordinates[0]?.length === 3) {
+                this.renderElevationProfile(features[0].geometry.coordinates);
+            }
+
+            this.fetchAlongRoutePOIs(this.currentRoutes[0].geometry.coordinates);
+
+        } catch (err) {
+            console.error('ORS Route fetch error:', err);
+            await this.fetchRouteOSRMFallback(profile);
+        }
+    }
+
+    // ─── OSRM Fallback ────────────────────────────────────────────────────────────────────
+    async fetchRouteOSRMFallback(profile) {
+        const info = this.navPanel.querySelector('#nav-route-info');
+
+        // Map ORS profile names back to OSRM equivalents
+        const osrmMap = {
+            'driving-car': 'driving',
+            'cycling-regular': 'cycling',
+            'foot-walking': 'foot'
+        };
+        const osrmProfile = osrmMap[profile.ors] || 'driving';
+        const wantAlts = profile.alternatives === true;
+
+        try {
+            let coords = `${this.startLon},${this.startLat}`;
+            this.waypoints.forEach(wp => { if (wp.lat && wp.lon) coords += `;${wp.lon},${wp.lat}`; });
+            coords += `;${this.destLon},${this.destLat}`;
+
+            const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${coords}` +
+                `?overview=full&geometries=geojson&steps=true&alternatives=${wantAlts ? 'true' : 'false'}`;
             const response = await fetch(url);
             const data = await response.json();
 
@@ -429,24 +581,39 @@ class NavigationSystem {
                 return;
             }
 
-            this.currentRoutes = data.routes;
+            info.innerHTML = `<p class="route-note" style="color:#F59E0B">⚠️ Using backup routing (ORS key not set).
+                <a href="https://openrouteservice.org/dev/#/signup" target="_blank" style="color:#F59E0B">Get free ORS key →</a></p>`;
+
+            let routes = data.routes;
+            if (!wantAlts && routes.length > 1) {
+                routes = routes.slice(0, 1);
+            }
+            this.currentRoutes = routes;
             this.selectedRouteIdx = 0;
 
-            this.renderRouteOptions(data.routes, profile);
+            this.renderRouteOptions(routes, profile);
             this.showRouteDetails(0, profile);
-            this.drawAllRoutes(data.routes);
+            this.drawAllRoutes(routes, profile);
 
             this.navPanel.querySelector('#start-nav-btn').style.display = 'block';
-
-            // Update collapsed summary
-            this._updateCollapsedSummary(data.routes[0], profile);
-
-            this.fetchAlongRoutePOIs(data.routes[0].geometry.coordinates);
+            this._updateCollapsedSummary(routes[0], profile);
+            this.fetchAlongRoutePOIs(routes[0].geometry.coordinates);
 
         } catch (err) {
-            console.error('Route fetch error:', err);
-            info.innerHTML = '<p class="route-error">❌ Route calculation failed. Try again.</p>';
+            this.navPanel.querySelector('#nav-route-info').innerHTML =
+                '<p class="route-error">❌ Route calculation failed. Check your internet connection.</p>';
         }
+    }
+
+    // ─── ORS instruction-type number → OSRM-style string ────────────────────────
+    _orsInstructionType(orsType) {
+        const map = {
+            0: 'depart', 1: 'turn', 2: 'turn', 3: 'turn',
+            4: 'turn', 5: 'merge', 6: 'fork', 7: 'roundabout',
+            8: 'roundabout', 9: 'continue', 10: 'turn', 11: 'arrive',
+            12: 'arrive', 13: 'continue'
+        };
+        return map[orsType] || 'continue';
     }
 
     _updateCollapsedSummary(route, profile) {
@@ -464,27 +631,6 @@ class NavigationSystem {
         this.waypoints.forEach(wp => { if (wp.lat && wp.lon) coords += `;${wp.lon},${wp.lat}`; });
         coords += `;${this.destLon},${this.destLat}`;
         return coords;
-    }
-
-    showEstimatedRoute(profile) {
-        const info = this.navPanel.querySelector('#nav-route-info');
-        const routesList = this.navPanel.querySelector('#nav-routes-list');
-        let totalDist = this.haversine(this.startLat, this.startLon, this.destLat, this.destLon);
-        let prevLat = this.startLat, prevLon = this.startLon;
-        this.waypoints.forEach(wp => {
-            if (wp.lat) { totalDist += this.haversine(prevLat, prevLon, wp.lat, wp.lon); prevLat = wp.lat; prevLon = wp.lon; }
-        });
-        const time = totalDist / profile.speed;
-        routesList.innerHTML = '';
-        info.innerHTML = `
-            <div class="route-summary">
-                <div class="route-stat"><span class="stat-value">${this.formatDuration(time * 60)}</span><span class="stat-label">Estimated</span></div>
-                <div class="route-stat"><span class="stat-value">${totalDist.toFixed(1)} km</span><span class="stat-label">Distance</span></div>
-            </div>
-            <p class="route-note">⚠️ ${profile.label} is estimated — check local transit apps.</p>
-        `;
-        this.drawStraightLine();
-        this.navPanel.querySelector('#start-nav-btn').style.display = 'none';
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -517,12 +663,61 @@ class NavigationSystem {
                 card.classList.add('selected');
                 this.selectedRouteIdx = i;
                 this.showRouteDetails(i, profile);
-                this.drawAllRoutes(routes);
+                this.drawAllRoutes(routes, profile);
                 this._updateCollapsedSummary(routes[i], profile);
                 this.fetchAlongRoutePOIs(routes[i].geometry.coordinates);
             });
             container.appendChild(card);
         });
+    }
+
+    // ─── Elevation Profile Chart ────────────────────────────────────────────────
+    renderElevationProfile(coordinates) {
+        const existingChart = this.navPanel.querySelector('#elevation-chart');
+        if (existingChart) existingChart.remove();
+
+        const has3D = coordinates[0]?.length === 3;
+        if (!has3D) return;
+
+        const elevations = coordinates.map(c => c[2]);
+        const minElev = Math.min(...elevations);
+        const maxElev = Math.max(...elevations);
+        const range = maxElev - minElev || 1;
+
+        const chartDiv = document.createElement('div');
+        chartDiv.id = 'elevation-chart';
+        chartDiv.className = 'elevation-chart';
+        chartDiv.innerHTML = `
+            <div class="elev-header">
+                <span>📈 Elevation Profile</span>
+                <span class="elev-range">${Math.round(minElev)}m – ${Math.round(maxElev)}m</span>
+            </div>
+            <svg viewBox="0 0 300 60" preserveAspectRatio="none" class="elev-svg">
+                <defs>
+                    <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%"   stop-color="#4285F4" stop-opacity="0.8"/>
+                        <stop offset="100%" stop-color="#4285F4" stop-opacity="0.1"/>
+                    </linearGradient>
+                </defs>
+                <path d="${this._buildElevationPath(elevations, minElev, range, 300, 60)}"
+                      fill="url(#elevGrad)" stroke="#4285F4" stroke-width="1.5"/>
+            </svg>
+        `;
+
+        // Insert before nav-actions
+        const actions = this.navPanel.querySelector('.nav-actions');
+        if (actions) actions.parentNode.insertBefore(chartDiv, actions);
+    }
+
+    _buildElevationPath(elevations, minElev, range, width, height) {
+        const step = width / (Math.max(elevations.length - 1, 1));
+        const points = elevations.map((e, i) => {
+            const x = i * step;
+            const y = height - ((e - minElev) / range) * (height - 4) - 2;
+            return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+        });
+        points.push('L' + width + ',' + height + ' L0,' + height + ' Z');
+        return points.join(' ');
     }
 
     showRouteDetails(idx, profile) {
@@ -548,6 +743,22 @@ class NavigationSystem {
             </div>
         `;
 
+
+        // Append ORS-specific extras (ascent/descent/warnings) if available
+        if (route.ascent !== undefined) {
+            const extraDiv = document.createElement('div');
+            extraDiv.className = 'route-extras';
+            extraDiv.innerHTML =
+                '<span class="route-extra-item">⬆️ ' + Math.round(route.ascent) + 'm ascent</span>' +
+                '<span class="route-extra-item">⬇️ ' + Math.round(route.descent) + 'm descent</span>';
+            info.appendChild(extraDiv);
+        }
+        if (route.warnings && route.warnings.length > 0) {
+            const warnDiv = document.createElement('div');
+            warnDiv.className = 'route-warning';
+            warnDiv.innerHTML = route.warnings.map(w => '⚠️ ' + (w.message || w)).join('<br>');
+            info.appendChild(warnDiv);
+        }
         let allSteps = [];
         route.legs.forEach((leg, legIdx) => {
             if (route.legs.length > 1) {
@@ -572,26 +783,28 @@ class NavigationSystem {
     // ═══════════════════════════════════════════════════════════
     // Route Drawing
     // ═══════════════════════════════════════════════════════════
-    drawAllRoutes(routes) {
+    drawAllRoutes(routes, profile) {
+        profile = profile || this.profiles[this.selectedMode] || this.profiles.driving;
+        const modeColor = Cesium.Color.fromCssColorString(profile.color);
         this.clearRoute();
 
-        // Alt routes (light blue)
+        // Alternate driving paths only (lighter, neutral)
         routes.forEach((route, i) => {
             if (i === this.selectedRouteIdx) return;
             const positions = route.geometry.coordinates.map(c => Cesium.Cartesian3.fromDegrees(c[0], c[1]));
             this.routeEntities.push(this.viewer.entities.add({
-                polyline: { positions, width: 5, material: Cesium.Color.fromCssColorString('#93c5fd').withAlpha(0.55), clampToGround: true }
+                polyline: { positions, width: 5, material: Cesium.Color.fromCssColorString('#93c5fd').withAlpha(0.5), clampToGround: true }
             }));
         });
 
-        // Selected route
+        // Selected route — color matches mode (car blue / bike green / walk orange)
         const sel = routes[this.selectedRouteIdx];
         const positions = sel.geometry.coordinates.map(c => Cesium.Cartesian3.fromDegrees(c[0], c[1]));
         this.routeEntities.push(this.viewer.entities.add({
-            polyline: { positions, width: 10, material: Cesium.Color.fromCssColorString('#1a5bc4').withAlpha(0.35), clampToGround: true }
+            polyline: { positions, width: 10, material: modeColor.withAlpha(0.28), clampToGround: true }
         }));
         this.routeEntities.push(this.viewer.entities.add({
-            polyline: { positions, width: 6, material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.2, color: Cesium.Color.fromCssColorString('#4285F4') }), clampToGround: true }
+            polyline: { positions, width: 6, material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.22, color: modeColor }), clampToGround: true }
         }));
 
         // Markers
@@ -634,18 +847,6 @@ class NavigationSystem {
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },
             duration: 2.0
         });
-    }
-
-    drawStraightLine() {
-        this.clearRoute();
-        const positions = [
-            Cesium.Cartesian3.fromDegrees(this.startLon, this.startLat),
-            Cesium.Cartesian3.fromDegrees(this.destLon, this.destLat)
-        ];
-        this.routeEntities.push(this.viewer.entities.add({
-            polyline: { positions, width: 4, material: new Cesium.PolylineDashMaterialProperty({ color: Cesium.Color.fromCssColorString('#4285F4'), dashLength: 16 }), clampToGround: true }
-        }));
-        this.flyToFitRoute([[this.startLon, this.startLat], [this.destLon, this.destLat]]);
     }
 
     clearRoute() {
@@ -766,7 +967,7 @@ class NavigationSystem {
         }
         const remaining = this.haversine(lat, lon, this.destLat, this.destLon);
         const meta = this.navPanel.querySelector('#collapsed-meta');
-        const speed = this.profiles[this.selectedMode].speed;
+        const speed = (this.profiles[this.selectedMode] || this.profiles.driving).speed;
         const eta = remaining / speed;
         meta.innerHTML = `<span class="live-dot"></span> ${remaining.toFixed(1)} km · ETA ${this.formatDuration(eta * 60)}`;
 
@@ -806,12 +1007,10 @@ class NavigationSystem {
             driving: { min: 0, max: Infinity },
             cycling: { min: 0, max: 300 },
             walking: { min: 0, max: 50 },
-            train:   { min: 5, max: Infinity },
-            bus:     { min: 2, max: Infinity },
         };
         this.navPanel.querySelectorAll('.mode-btn').forEach(btn => {
             const rule = rules[btn.dataset.mode];
-            const unavailable = rule && (distKm < rule.min || distKm > rule.max);
+            const unavailable = !rule || distKm < rule.min || distKm > rule.max;
             btn.classList.toggle('unavailable', unavailable);
             btn.disabled = unavailable;
         });

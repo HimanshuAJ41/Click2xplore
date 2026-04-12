@@ -63,13 +63,16 @@
 
             <!-- Desktop: view mode buttons -->
             <nav class="nav-menu desktop-only">
-                <button class="nav-btn active" data-view="globe">
+                <button class="nav-btn" data-view="globe">
                     <span class="nav-icon">🌍</span>Globe
                 </button>
-                <button class="nav-btn" data-view="satellite">
+                <button class="nav-btn active" data-view="satellite">
                     <span class="nav-icon">🛰️</span>Satellite
                 </button>
-                <button class="nav-btn" data-view="terrain">
+                <button class="nav-btn" data-view="street" title="Topo street map — roads, peaks & contours (OpenTopoMap)">
+                    <span class="nav-icon">🗺️</span>Street
+                </button>
+                <button class="nav-btn" data-view="terrain" title="Shaded terrain map (Esri World Topo, similar to Google Terrain)">
                     <span class="nav-icon">🏔️</span>Terrain
                 </button>
             </nav>
@@ -111,9 +114,10 @@
                         <!-- View modes (mobile shows these here) -->
                         <div class="dropdown-section mobile-only">
                             <p class="dropdown-label">Map View</p>
-                            <div class="dropdown-row">
-                                <button class="ddown-btn active" data-view="globe">🌍 Globe</button>
-                                <button class="ddown-btn" data-view="satellite">🛰️ Satellite</button>
+                            <div class="dropdown-row dropdown-row-views">
+                                <button class="ddown-btn" data-view="globe">🌍 Globe</button>
+                                <button class="ddown-btn active" data-view="satellite">🛰️ Satellite</button>
+                                <button class="ddown-btn" data-view="street">🗺️ Street</button>
                                 <button class="ddown-btn" data-view="terrain">🏔️ Terrain</button>
                             </div>
                         </div>
@@ -253,7 +257,8 @@
                 <span id="live-coords">0.0000°, 0.0000°</span>
             </div>
             <div class="footer-info">
-                <span>Powered by Cesium.js</span>
+                <span class="footer-powered">Powered by Cesium.js</span>
+                <span id="basemap-attrib" class="basemap-attrib" aria-live="polite"></span>
             </div>
         </footer>
     </div>
@@ -261,6 +266,7 @@
     <script src="info-panel.js"></script>
     <script src="navigation.js"></script>
     <script src="places-db.js"></script>
+    <script src="admin-boundaries.js"></script>
     <script src="app.js"></script>
 
     <script>

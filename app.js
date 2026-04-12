@@ -27,6 +27,14 @@ let userLat = null;
 let userLon = null;
 let regionBoundarySource = null; // Cesium DataSource for boundary polygons
 
+/** Imagery layer refs (set in setupScene / lazy for Esri topo) */
+let satelliteBaseImageryLayer = null;
+let labelOverlayImageryLayer = null;
+/** OpenTopoMap — Street / topo detail (former “Terrain”) */
+let streetMapImageryLayer = null;
+/** Esri World Topo — Google-style shaded terrain map */
+let googleTerrainMapImageryLayer = null;
+
 // ============================================
 // Initialize Application
 // ============================================
@@ -144,6 +152,10 @@ async function initCesium() {
         // Initialize navigation system
         window.navSystem = new NavigationSystem(viewer);
 
+        if (typeof ProgressiveAdminBoundaries !== 'undefined') {
+            ProgressiveAdminBoundaries.init(viewer);
+        }
+
     } catch (error) {
         console.error('Error initializing Cesium:', error);
         showError('Failed to initialize globe. Please check your API token.');
@@ -212,6 +224,10 @@ function setupScene() {
         credit: 'Labels © CartoDB'
     });
     viewer.imageryLayers.addImageryProvider(labelOverlay);
+    satelliteBaseImageryLayer = viewer.imageryLayers.get(0);
+    labelOverlayImageryLayer = viewer.imageryLayers.get(viewer.imageryLayers.length - 1);
+
+    document.querySelector('.app-container')?.setAttribute('data-map-view', 'satellite');
 
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     const satBtn = document.querySelector('.nav-btn[data-view="satellite"]');
@@ -979,49 +995,141 @@ async function fetchAndShowBoundary(name, lat, lon, existingBbox) {
 }
 
 /**
- * Change the view mode (globe, satellite, terrain)
+ * Change the view mode: globe | satellite | street (OpenTopo) | terrain (Esri topo).
  */
 function changeView(view) {
     const scene = viewer.scene;
+    const globe = scene.globe;
+
+    document.querySelector('.app-container')?.setAttribute('data-map-view', view);
 
     switch (view) {
         case 'globe':
-            scene.globe.enableLighting = true;
-            scene.globe.showGroundAtmosphere = true;
+            globe.enableLighting = true;
+            globe.showGroundAtmosphere = true;
+            globe.terrainExaggeration = 1.0;
+            scene.fog.density = 0.00012;
+            scene.fog.minimumBrightness = 0.03;
             hideCleanMapLayer();
             break;
         case 'satellite':
-            scene.globe.enableLighting = false;
-            scene.globe.showGroundAtmosphere = false;
+            globe.enableLighting = false;
+            globe.showGroundAtmosphere = false;
+            globe.terrainExaggeration = 1.0;
+            scene.fog.density = 0.00012;
+            scene.fog.minimumBrightness = 0.03;
             hideCleanMapLayer();
             break;
+        case 'street':
+            globe.enableLighting = true;
+            globe.showGroundAtmosphere = false;
+            globe.terrainExaggeration = 1.12;
+            scene.fog.density = 0.00007;
+            scene.fog.minimumBrightness = 0.06;
+            showStreetMapLayer();
+            break;
         case 'terrain':
-            scene.globe.enableLighting = false;
-            scene.globe.showGroundAtmosphere = false;
-            showCleanMapLayer();
+            globe.enableLighting = true;
+            globe.showGroundAtmosphere = false;
+            globe.terrainExaggeration = 1.08;
+            scene.fog.density = 0.00006;
+            scene.fog.minimumBrightness = 0.07;
+            void showGoogleTerrainMapLayer();
+            break;
+        default:
+            hideCleanMapLayer();
             break;
     }
+
+    viewer.scene.requestRender();
 }
 
-// White/clean map layer for terrain & navigation views
-let cleanMapLayer = null;
+/**
+ * Street / mountain style: OpenTopoMap (roads, contours, relief). Used by navigation too.
+ */
+function showStreetMapLayer() {
+    if (googleTerrainMapImageryLayer) googleTerrainMapImageryLayer.show = false;
 
-function showCleanMapLayer() {
-    if (!cleanMapLayer) {
-        cleanMapLayer = viewer.imageryLayers.addImageryProvider(
+    if (!streetMapImageryLayer) {
+        streetMapImageryLayer = viewer.imageryLayers.addImageryProvider(
             new Cesium.UrlTemplateImageryProvider({
-                url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                subdomains: ['a', 'b', 'c', 'd'],
-                credit: 'CartoDB Positron'
+                url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                subdomains: ['a', 'b', 'c'],
+                maximumLevel: 17,
+                credit: '© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors'
             })
         );
+        streetMapImageryLayer.brightness = 1.04;
+        streetMapImageryLayer.contrast = 1.06;
+        streetMapImageryLayer.saturation = 0.92;
     }
-    cleanMapLayer.show = true;
+
+    streetMapImageryLayer.show = true;
+    if (satelliteBaseImageryLayer) satelliteBaseImageryLayer.show = false;
+    if (labelOverlayImageryLayer) labelOverlayImageryLayer.show = false;
+
+    syncBasemapAttrib();
+}
+
+/**
+ * Google Maps–style terrain: Esri World Topo (hypsometric tint + shaded relief in raster).
+ */
+async function showGoogleTerrainMapLayer() {
+    if (streetMapImageryLayer) streetMapImageryLayer.show = false;
+
+    if (!googleTerrainMapImageryLayer) {
+        try {
+            const topoUrl = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer';
+            let provider;
+            if (typeof Cesium.ArcGisMapServerImageryProvider.fromUrl === 'function') {
+                provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(topoUrl);
+            } else {
+                provider = new Cesium.ArcGisMapServerImageryProvider({ url: topoUrl });
+                await provider.readyPromise;
+            }
+            googleTerrainMapImageryLayer = viewer.imageryLayers.addImageryProvider(provider);
+            googleTerrainMapImageryLayer.brightness = 1.02;
+            googleTerrainMapImageryLayer.contrast = 1.05;
+        } catch (e) {
+            console.warn('Esri World Topo Map failed, falling back to Street map:', e);
+            showStreetMapLayer();
+            return;
+        }
+    }
+
+    googleTerrainMapImageryLayer.show = true;
+    if (satelliteBaseImageryLayer) satelliteBaseImageryLayer.show = false;
+    if (labelOverlayImageryLayer) labelOverlayImageryLayer.show = false;
+
+    syncBasemapAttrib();
+    viewer.scene.requestRender();
+}
+
+/** @deprecated name — use showStreetMapLayer; kept for navigation.js */
+function showCleanMapLayer() {
+    showStreetMapLayer();
 }
 
 function hideCleanMapLayer() {
-    if (cleanMapLayer) {
-        cleanMapLayer.show = false;
+    if (streetMapImageryLayer) streetMapImageryLayer.show = false;
+    if (googleTerrainMapImageryLayer) googleTerrainMapImageryLayer.show = false;
+    if (satelliteBaseImageryLayer) satelliteBaseImageryLayer.show = true;
+    if (labelOverlayImageryLayer) labelOverlayImageryLayer.show = true;
+
+    syncBasemapAttrib();
+}
+
+function syncBasemapAttrib() {
+    const el = document.getElementById('basemap-attrib');
+    if (!el) return;
+    const streetOn = streetMapImageryLayer && streetMapImageryLayer.show;
+    const topoOn = googleTerrainMapImageryLayer && googleTerrainMapImageryLayer.show;
+    if (streetOn) {
+        el.textContent = ' · Street © OpenTopoMap / OpenStreetMap';
+    } else if (topoOn) {
+        el.textContent = ' · Terrain © Esri, HERE, Garmin, FAO, NOAA, USGS, EPA, NPS, NRCan';
+    } else {
+        el.textContent = '';
     }
 }
 
