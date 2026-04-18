@@ -636,12 +636,24 @@ function setupEventListeners() {
         const query = searchInput.value.trim();
         clearTimeout(suggestDebounce);
 
+        if (query.length === 0) {
+            showSearchHistory();
+            return;
+        }
+
         if (query.length < 2) {
             hideSuggestions();
             return;
         }
 
         suggestDebounce = setTimeout(() => fetchSuggestions(query), 200);
+    });
+
+    // Show history when clicking into empty search box
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim().length === 0) {
+            showSearchHistory();
+        }
     });
 
     // Keyboard navigation
@@ -695,6 +707,38 @@ function setupEventListeners() {
         suggestionsBox.classList.remove('active');
         suggestionsBox.innerHTML = '';
         selectedSuggIdx = -1;
+    }
+
+    // ─── Search History (LocalStorage) ───────────────────────────
+    function getSearchHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('click2xplore_history')) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveSearchHistory(item) {
+        if (item.source === 'category') return; // Don't save category searches
+        let history = getSearchHistory();
+        // Remove existing identical entry
+        history = history.filter(h => h.name !== item.name);
+        // Add to front
+        history.unshift({
+            name: item.name, detail: item.detail, lat: item.lat, lon: item.lon,
+            type: item.type, icon: '🕒', source: 'history', boundingbox: item.boundingbox
+        });
+        if (history.length > 5) history = history.slice(0, 5);
+        localStorage.setItem('click2xplore_history', JSON.stringify(history));
+    }
+
+    function showSearchHistory() {
+        const history = getSearchHistory();
+        if (history.length > 0) {
+            renderSuggestions(history, true);
+        } else {
+            hideSuggestions();
+        }
     }
 
     async function fetchSuggestions(query) {
@@ -801,9 +845,17 @@ function setupEventListeners() {
         }
     }
 
-    function renderSuggestions(items) {
+    function renderSuggestions(items, isHistory = false) {
         suggestionsBox.innerHTML = '';
         selectedSuggIdx = -1;
+
+        if (isHistory && items.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'suggestion-item category-header-item';
+            header.style.cursor = 'default';
+            header.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); padding-left:4px;">Recent Searches</div>`;
+            suggestionsBox.appendChild(header);
+        }
 
         items.forEach((result) => {
             const item = document.createElement('div');
@@ -833,11 +885,12 @@ function setupEventListeners() {
                         <div class="suggestion-name">${sourceTag} ${result.name}</div>
                         <div class="suggestion-detail">${result.detail}</div>
                     </div>
-                    <span class="suggestion-type">${result.type}</span>
+                    ${result.source !== 'history' ? `<span class="suggestion-type">${result.type}</span>` : ''}
                 `;
 
                 item.addEventListener('click', () => {
-                    searchInput.value = `${result.name}, ${result.detail.split(',')[0]}`;
+                    saveSearchHistory(result);
+                    searchInput.value = `${result.name}, ${result.detail?.split(',')[0] || ''}`;
                     hideSuggestions();
                     clearRegionBoundary();
                     fetchAndShowBoundary(result.name, result.lat, result.lon, result.boundingbox);
@@ -1554,10 +1607,11 @@ function startWonderToastCycle() {
     const container = document.getElementById('wonder-toast-container');
     if (!container) return;
 
-    // Pause on globe interaction, resume after 30s idle
+    // Pause on globe interaction, resume after 15s idle
     const globe = document.getElementById('cesiumContainer');
     const pauseAndResume = () => {
         _wonderPaused = true;
+        clearTimeout(_wonderTimer);
         clearTimeout(_wonderResumeTimer);
         // Manual map interaction: resume after 15s idle
         _wonderResumeTimer = setTimeout(() => {
@@ -1575,6 +1629,13 @@ function showWonderToast() {
     if (_wonderPaused) return;
     const container = document.getElementById('wonder-toast-container');
     if (!container) return;
+
+    // ★ FIX: Prevent stacking — remove any existing toast before creating a new one
+    const existing = container.querySelector('.wonder-toast');
+    if (existing) {
+        existing.remove();
+    }
+    clearTimeout(_wonderTimer);
 
     const w = WONDER_PLACES[_wonderIdx];
     _wonderIdx = (_wonderIdx + 1) % WONDER_PLACES.length;
@@ -1614,6 +1675,7 @@ function showWonderToast() {
         dismissToast(toast);
         flyToLocation(w.lat, w.lon, w.name);
         _wonderPaused = true;
+        clearTimeout(_wonderTimer);
         clearTimeout(_wonderResumeTimer);
         // Resume after 8s — just long enough to enjoy the flyTo animation
         _wonderResumeTimer = setTimeout(() => {

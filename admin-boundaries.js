@@ -143,7 +143,7 @@ const ProgressiveAdminBoundaries = {
             const rank = _neProp(entity, 'SCALERANK');
             const scalerank = typeof rank === 'number' ? rank : parseInt(rank, 10) || 10;
             entity.__scalerank = scalerank;
-            if (entity.billboard) entity.billboard.show = false;
+            if (entity.billboard) entity.billboard = undefined;
             if (entity.point) {
                 entity.point = new Cesium.PointGraphics({
                     pixelSize: 4,
@@ -202,9 +202,14 @@ const ProgressiveAdminBoundaries = {
         const entities = ds.entities.values;
         for (let i = 0; i < entities.length; i++) {
             const e = entities[i];
+            if (e.billboard) e.billboard = undefined;
+
             const text = (getName(e) || '').trim();
-            if (!text) continue;
-            if (e.billboard) e.billboard.show = false;
+            if (!text) {
+                e.show = false;
+                continue;
+            }
+
             e.point = new Cesium.PointGraphics({
                 pixelSize: 0,
                 color: Cesium.Color.TRANSPARENT,

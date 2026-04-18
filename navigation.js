@@ -42,8 +42,8 @@ class NavigationSystem {
 
         this.profiles = {
             driving: { label: '🚗 Car', ors: 'driving-car', speed: 40, color: '#4285F4', alternatives: true },
-            cycling: { label: '🚲 Bike', ors: 'cycling-regular', speed: 15, color: '#34A853', alternatives: false },
-            walking: { label: '🚶 Walk', ors: 'foot-walking', speed: 5, color: '#FF6B35', alternatives: false },
+            cycling: { label: '🚲 Bike', ors: 'cycling-regular', speed: 15, color: '#34A853', alternatives: true },
+            walking: { label: '🚶 Walk', ors: 'foot-walking', speed: 5, color: '#FF6B35', alternatives: true },
         };
         this.init();
     }
@@ -463,10 +463,9 @@ class NavigationSystem {
                 units: 'km'
             };
 
-            // Only driving asks for alternate paths — bike/walk use a single best path so
-            // the line on the map always matches the selected mode (no extra “ghost” routes).
+            // Request alternate paths for all modes to provide the user with path choices
             if (profile.alternatives) {
-                body.alternative_routes = { target_count: 1, weight_factor: 1.45 };
+                body.alternative_routes = { target_count: 2, weight_factor: 1.45 };
             }
 
             // Build avoid_features from checkboxes
@@ -504,7 +503,7 @@ class NavigationSystem {
                 return;
             }
 
-            // Bike/walk: use one route only (ORS may still return extras in edge cases).
+            // Truncate to a single route if the profile disables alternatives (none currently do, but preserved for flexibility)
             if (!profile.alternatives) {
                 features = features.slice(0, 1);
             }
@@ -765,16 +764,24 @@ class NavigationSystem {
                 const to = legIdx === route.legs.length - 1 ? this.destName : (this.waypoints[legIdx]?.name || `Stop ${legIdx + 1}`);
                 allSteps.push({ type: 'leg-header', text: `To ${to}` });
             }
-            leg.steps.forEach(s => allSteps.push(s));
+            (leg.steps || []).forEach(s => allSteps.push(s));
         });
 
         const stepHTML = allSteps.slice(0, 20).map(s => {
-            if (s.type === 'leg-header') {
-                return `<div class="nav-step leg-header"><span class="step-icon">📍</span><span class="step-text">${s.text}</span></div>`;
+            try {
+                if (s.type === 'leg-header') {
+                    const cleanText = s.text.replace(/<[^>]*>?/gm, '');
+                    return `<div class="nav-step leg-header"><span class="step-icon">📍</span><span class="step-text">${cleanText}</span></div>`;
+                }
+                const maneuver = s.maneuver || {};
+                const icon = this.getStepIcon(maneuver.type || 'continue', maneuver.modifier || '');
+                const dist = s.distance > 1000 ? (s.distance / 1000).toFixed(1) + ' km' : Math.round(s.distance || 0) + ' m';
+                const stepNameRaw = s.name || s.instruction || 'Continue';
+                const stepName = stepNameRaw.replace(/<[^>]*>?/gm, ''); // Remove API-injected HTML tags
+                return `<div class="nav-step"><span class="step-icon">${icon}</span><span class="step-text">${stepName}</span><span class="step-dist">${dist}</span></div>`;
+            } catch (e) {
+                return '';
             }
-            const icon = this.getStepIcon(s.maneuver.type, s.maneuver.modifier);
-            const dist = s.distance > 1000 ? (s.distance / 1000).toFixed(1) + ' km' : Math.round(s.distance) + ' m';
-            return `<div class="nav-step"><span class="step-icon">${icon}</span><span class="step-text">${s.name || 'Continue'}</span><span class="step-dist">${dist}</span></div>`;
         }).join('');
 
         steps.innerHTML = stepHTML ? `<details class="steps-details"><summary>📋 Directions</summary>${stepHTML}</details>` : '';
@@ -1005,8 +1012,8 @@ class NavigationSystem {
     updateModeAvailability(distKm) {
         const rules = {
             driving: { min: 0, max: Infinity },
-            cycling: { min: 0, max: 300 },
-            walking: { min: 0, max: 50 },
+            cycling: { min: 0, max: Infinity },
+            walking: { min: 0, max: Infinity },
         };
         this.navPanel.querySelectorAll('.mode-btn').forEach(btn => {
             const rule = rules[btn.dataset.mode];

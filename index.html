@@ -26,7 +26,7 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-2SYEH2392H"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+        function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
 
         gtag('config', 'G-2SYEH2392H');
@@ -69,11 +69,13 @@
                 <button class="nav-btn active" data-view="satellite">
                     <span class="nav-icon">🛰️</span>Satellite
                 </button>
-                <button class="nav-btn" data-view="street" title="Topo street map — roads, peaks & contours (OpenTopoMap)">
-                    <span class="nav-icon">🗺️</span>Street
+                <button class="nav-btn" data-view="Terrain"
+                    title="Topo Terrain map — roads, peaks & contours (OpenTopoMap)">
+                    <span class="nav-icon">🗺️</span>Terrain
                 </button>
-                <button class="nav-btn" data-view="terrain" title="Shaded terrain map (Esri World Topo, similar to Google Terrain)">
-                    <span class="nav-icon">🏔️</span>Terrain
+                <button class="nav-btn" data-view="street"
+                    title="Shaded street map (Esri World Topo, similar to Google street)">
+                    <span class="nav-icon">🏔️</span>Street
                 </button>
             </nav>
 
@@ -289,9 +291,11 @@
         if (searchToggle) {
             searchToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
-                searchInput.classList.toggle('search-open');
-                searchBtn.classList.toggle('search-open');
-                if (searchInput.classList.contains('search-open')) {
+                const isOpen = searchInput.classList.toggle('search-open');
+                searchBtn.classList.toggle('search-open', isOpen);
+                // ★ FIX: Hide toggle icon when search is open to prevent duplicate icons
+                searchToggle.classList.toggle('hidden-search-toggle', isOpen);
+                if (isOpen) {
                     searchInput.focus();
                 }
             });
@@ -299,6 +303,7 @@
                 if (!e.target.closest('.search-container')) {
                     searchInput.classList.remove('search-open');
                     searchBtn.classList.remove('search-open');
+                    searchToggle.classList.remove('hidden-search-toggle');
                 }
             });
         }
@@ -317,13 +322,18 @@
             });
         });
 
-        // ── Dropdown control buttons ──────────────────────────────
+        // ── Dropdown control buttons (direct action — no dependency on hidden desktop panel) ──
         function bindDD(ddId, realId) {
             const ddBtn = document.getElementById(ddId);
             const realBtn = document.getElementById(realId);
             if (ddBtn && realBtn) {
                 ddBtn.addEventListener('click', () => {
                     realBtn.click();
+                    dropdown.classList.remove('open');
+                });
+            } else if (ddBtn) {
+                // Fallback: if desktop button is missing/hidden, fire action directly
+                ddBtn.addEventListener('click', () => {
                     dropdown.classList.remove('open');
                 });
             }
