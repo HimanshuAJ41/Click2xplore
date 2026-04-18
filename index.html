@@ -69,13 +69,13 @@
                 <button class="nav-btn active" data-view="satellite">
                     <span class="nav-icon">🛰️</span>Satellite
                 </button>
-                <button class="nav-btn" data-view="Terrain"
-                    title="Topo Terrain map — roads, peaks & contours (OpenTopoMap)">
-                    <span class="nav-icon">🗺️</span>Terrain
-                </button>
                 <button class="nav-btn" data-view="street"
-                    title="Shaded street map (Esri World Topo, similar to Google street)">
-                    <span class="nav-icon">🏔️</span>Street
+                    title="Topo street map — roads, peaks & contours (OpenTopoMap)">
+                    <span class="nav-icon">🗺️</span>Street
+                </button>
+                <button class="nav-btn" data-view="terrain"
+                    title="Shaded terrain map (Esri World Topo, similar to Google Terrain)">
+                    <span class="nav-icon">🏔️</span>Terrain
                 </button>
             </nav>
 
@@ -241,12 +241,16 @@
 
         <!-- Detailed Location Info Panel -->
         <div class="detail-panel glass-effect" id="detail-panel">
+            <!-- Mobile drag handle -->
+            <div class="ip-drag-handle" id="ip-drag-handle">
+                <div class="ip-drag-pill"></div>
+            </div>
             <div class="detail-header">
-                <h3>Location Details</h3>
+                <h3>📍 Location Details</h3>
                 <button class="close-btn" id="close-detail">×</button>
             </div>
             <div class="detail-content">
-                <!-- Content will be dynamically populated -->
+                <!-- Content dynamically populated by info-panel.js -->
             </div>
         </div>
 

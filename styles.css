@@ -287,6 +287,17 @@ body {
     transition: var(--transition-normal);
 }
 
+/* Keep one clear search interaction path on desktop:
+   typing + Enter or clicking suggestions (no extra icon button). */
+@media (min-width: 769px) {
+    .search-btn {
+        display: none;
+    }
+    .search-input {
+        padding-right: 18px;
+    }
+}
+
 .search-btn:hover {
     background: var(--primary-light);
     transform: scale(1.05);
@@ -821,6 +832,11 @@ body {
     z-index: 300;
 }
 
+/* Avoid overlap with details panel on laptop/desktop */
+.app-container.detail-open .controls-panel {
+    right: calc(clamp(340px, 32vw, 440px) + 24px);
+}
+
 .control-btn {
     width: 44px;
     height: 44px;
@@ -866,8 +882,26 @@ body {
 
 
 
+/* Mobile bottom-sheet drag handle */
+.ip-drag-handle {
+    display: none;
+    justify-content: center;
+    padding: 10px 0 4px;
+    cursor: grab;
+    touch-action: none;
+}
+.ip-drag-pill {
+    width: 40px; height: 4px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 2px;
+}
+@media (max-width: 768px) {
+    .ip-drag-handle { display: flex; }
+}
+
 .close-btn {
     width: 28px;
+
     height: 28px;
     display: flex;
     align-items: center;
@@ -888,38 +922,34 @@ body {
 
 
 /* ========================================
-   Detail Panel + Image Carousel
+   Detail Panel — base (positioning & sizing
+   overridden by ip-v4-css from info-panel.js)
    ======================================== */
 
 .detail-panel {
     position: fixed;
-    top: 80px;
-    right: 20px;
-    width: 380px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-    z-index: 200;
-    border-radius: var(--radius-lg);
+    top: 72px;
+    right: 16px;
+    bottom: auto;
+    left: auto;
+    width: clamp(300px, 28vw, 420px);
+    max-height: calc(100dvh - 130px);
+    z-index: 400;
+    border-radius: 16px;
     opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translateX(calc(100% + 24px));
+    transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
+    overflow: hidden;
 }
-
 .detail-panel.visible {
     opacity: 1;
     transform: translateX(0);
     pointer-events: all;
+    overflow-y: auto;
 }
-
-.detail-panel::-webkit-scrollbar {
-    width: 4px;
-}
-
-.detail-panel::-webkit-scrollbar-thumb {
-    background: var(--border-glass);
-    border-radius: 2px;
-}
+.detail-panel::-webkit-scrollbar { width: 4px; }
+.detail-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
 .detail-header {
     display: flex;
@@ -934,283 +964,11 @@ body {
     font-weight: 600;
 }
 
-.detail-content {
-    padding: 0;
-}
 
-/* Image Carousel */
-.location-carousel {
-    position: relative;
-    width: 100%;
-    height: 200px;
-    overflow: hidden;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
-}
-
-.carousel-track {
-    display: flex;
-    width: 100%;
-    height: 100%;
-    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.carousel-slide {
-    min-width: 100%;
-    height: 100%;
-    position: relative;
-    flex-shrink: 0;
-}
-
-.carousel-slide img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.carousel-caption {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 8px 14px;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.carousel-controls {
-    position: absolute;
-    bottom: 32px;
-    left: 0;
-    right: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    z-index: 5;
-}
-
-.carousel-dots {
-    display: flex;
-    gap: 6px;
-}
-
-.carousel-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.carousel-dot.active {
-    background: white;
-    transform: scale(1.3);
-}
-
-.carousel-counter {
-    font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(0, 0, 0, 0.4);
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 600;
-}
-
-.no-images {
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.no-images-placeholder {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-}
-
-.no-images-placeholder span {
-    font-size: 1.5rem;
-    display: block;
-    margin-bottom: 6px;
-    opacity: 0.5;
-}
-
-/* Info Sections inside detail panel */
-.info-section {
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.info-section:last-child {
-    border-bottom: none;
-}
-
-.info-section h3 {
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-primary);
-}
-
-.section-icon {
-    font-size: 1rem;
-}
-
-.location-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.location-flag {
-    font-size: 2rem;
-}
-
-.location-title-area h2 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 3px;
-}
-
-.location-subtitle {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-}
+/* ── Detail panel inner sections are styled by ip-v4-css (info-panel.js) ── */
+/* Old .location-carousel, .info-section, .place-item etc. removed v4.0    */
 
 
-.info-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 8px;
-    max-height: 120px;
-    overflow-y: auto;
-}
-
-.tag {
-    padding: 4px 10px;
-    background: rgba(99, 102, 241, 0.15);
-    border-radius: 12px;
-    font-size: 0.75rem;
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.food-tag {
-    background: rgba(251, 146, 60, 0.15);
-    color: #fb923c;
-}
-
-.info-detail {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin: 6px 0;
-}
-
-.specialty-text {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    font-style: italic;
-    margin-bottom: 8px;
-}
-
-.places-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.place-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.place-item:last-child {
-    border-bottom: none;
-}
-
-.place-name {
-    font-size: 0.82rem;
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.place-distance,
-.place-type,
-.place-cuisine {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    margin-left: 8px;
-}
-
-.explore-more {
-    text-align: center;
-}
-
-.explore-link {
-    display: inline-block;
-    padding: 8px 20px;
-    background: rgba(99, 102, 241, 0.15);
-    border-radius: var(--radius-md);
-    color: var(--accent);
-    text-decoration: none;
-    font-size: 0.82rem;
-    font-weight: 500;
-    transition: var(--transition-normal);
-}
-
-.explore-link:hover {
-    background: rgba(99, 102, 241, 0.3);
-}
-
-.loading-state,
-.error-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-secondary);
-}
-
-.spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-glass);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 12px;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.error-icon {
-    font-size: 2rem;
-    margin-bottom: 10px;
-}
 
 /* ========================================
    Navigation Panel — Google Maps style
@@ -2862,6 +2620,14 @@ body {
         flex-direction: row;
         /* Horizontal layout */
         z-index: 3000;
+    }
+
+    /* When details are open on short laptops, anchor controls away from panel */
+    .app-container.detail-open .controls-panel {
+        left: 20px;
+        right: auto;
+        bottom: 24px;
+        transform: none;
     }
 
     /* Make divider vertical in horizontal layout */

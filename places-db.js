@@ -98,6 +98,25 @@ const FAMOUS_PLACES = [
     // ══════════════════════════════════════
     { name: "Imagica Theme Park", detail: "Khopoli, Maharashtra", lat: 18.8207, lon: 73.3847, type: "Waterpark", icon: "🎢", tags: ["waterpark", "amusement", "fun", "family", "theme park"] },
     { name: "Wet N Joy Waterpark", detail: "Lonavala, Maharashtra", lat: 18.7539, lon: 73.4182, type: "Waterpark", icon: "🎢", tags: ["waterpark", "fun", "family", "water slides", "amusement"] },
+
+    // ══════════════════════════════════════
+    // MAHARASHTRA — HIDDEN GEMS & DEEP EXPLORATION
+    // ══════════════════════════════════════
+    { name: "Kaas Pathar", detail: "Satara, Maharashtra", lat: 17.7214, lon: 73.8167, type: "Nature", icon: "🌸", tags: ["valley of flowers", "nature", "plateau", "unesco", "scenic"] },
+    { name: "Sandhan Valley", detail: "Bhandardara, Maharashtra", lat: 19.5262, lon: 73.7142, type: "Nature", icon: "⛰️", tags: ["trekking", "adventure", "valley of shadows", "canyon", "hidden gem"] },
+    { name: "Pawna Lake", detail: "Lonavala, Maharashtra", lat: 18.6656, lon: 73.4735, type: "Lake", icon: "⛺", tags: ["camping", "lake", "weekend", "scenic", "tent"] },
+    { name: "Tarkarli Beach", detail: "Sindhudurg, Maharashtra", lat: 16.0354, lon: 73.4839, type: "Beach", icon: "🏖️", tags: ["beach", "scuba diving", "water sports", "konkan", "scenic"] },
+    { name: "Velas", detail: "Ratnagiri, Maharashtra", lat: 17.9542, lon: 73.0305, type: "Beach", icon: "🐢", tags: ["beach", "turtles", "festival", "konkan", "hidden gem"] },
+    { name: "Malshej Ghat", detail: "Pune District, Maharashtra", lat: 19.3366, lon: 73.7744, type: "Nature", icon: "🌫️", tags: ["ghat", "monsoon", "scenic", "waterfalls", "nature"] },
+    { name: "Naneghat", detail: "Junnar, Maharashtra", lat: 19.2842, lon: 73.6653, type: "Nature", icon: "⛰️", tags: ["pass", "trekking", "historical", "cave", "adventure"] },
+    { name: "Rajgad Fort", detail: "Pune, Maharashtra", lat: 18.2464, lon: 73.6822, type: "Fort", icon: "🏰", tags: ["fort", "shivaji", "capital", "trekking"] },
+    { name: "Korigad Fort", detail: "Aamby Valley, Maharashtra", lat: 18.6186, lon: 73.3858, type: "Fort", icon: "🏰", tags: ["fort", "trekking", "easy trek", "scenic"] },
+    { name: "Amboli", detail: "Sindhudurg, Maharashtra", lat: 15.9610, lon: 73.9997, type: "Hill Station", icon: "🏘️", tags: ["hill station", "monsoon", "biodiversity", "waterfalls"] },
+    { name: "Bhandardara", detail: "Ahmednagar, Maharashtra", lat: 19.5446, lon: 73.7663, type: "Nature", icon: "⛺", tags: ["lake", "camping", "fireflies", "nature", "scenic"] },
+    { name: "Panchgani", detail: "Satara, Maharashtra", lat: 17.9238, lon: 73.8016, type: "Hill Station", icon: "🍓", tags: ["hill station", "strawberry", "scenic", "table land"] },
+    { name: "Harihareshwar", detail: "Raigad, Maharashtra", lat: 18.0051, lon: 73.0189, type: "Beach", icon: "🏖️", tags: ["beach", "temple", "konkan", "weekend"] },
+    { name: "Kamshet", detail: "Pune, Maharashtra", lat: 18.7735, lon: 73.5410, type: "Adventure", icon: "🪂", tags: ["paragliding", "adventure", "lake", "weekend"] },
+    { name: "Igatpuri", detail: "Nashik, Maharashtra", lat: 19.6953, lon: 73.5516, type: "Hill Station", icon: "🏘️", tags: ["hill station", "vipassana", "monsoon", "scenic"] },
     { name: "Aqua Imagica", detail: "Khopoli, Maharashtra", lat: 18.8190, lon: 73.3830, type: "Waterpark", icon: "🎢", tags: ["waterpark", "fun", "family", "water slides"] },
     { name: "Tikuji-ni-Wadi", detail: "Thane, Maharashtra", lat: 19.2474, lon: 72.9920, type: "Waterpark", icon: "🎢", tags: ["waterpark", "fun", "family", "amusement", "resort"] },
     { name: "Shangrila Resort Waterpark", detail: "Pune, Maharashtra", lat: 18.6372, lon: 73.7556, type: "Waterpark", icon: "🎢", tags: ["waterpark", "fun", "family", "resort"] },

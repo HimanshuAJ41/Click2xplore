@@ -34,6 +34,7 @@ let labelOverlayImageryLayer = null;
 let streetMapImageryLayer = null;
 /** Esri World Topo — Google-style shaded terrain map */
 let googleTerrainMapImageryLayer = null;
+let _labelOverlayMoveEndBound = null;
 
 // ============================================
 // Initialize Application
@@ -69,6 +70,8 @@ async function initCesium() {
 
             // Scene settings
             scene3DOnly: true,
+            requestRenderMode: true,
+            maximumRenderTimeChange: 0.5,
 
             // Credit display
             creditContainer: document.createElement('div')
@@ -143,6 +146,10 @@ async function initCesium() {
 
         // Initialize location info panel
         locationInfoPanel = new LocationInfoPanel('detail-panel');
+        // Expose globally so info-panel.js can fly camera + chain nearby clicks
+        window.locationInfoPanel = locationInfoPanel;
+        window.viewer = viewer;
+        locationInfoPanel.setViewer(viewer);
 
         // Setup detail panel close button
         document.getElementById('close-detail').addEventListener('click', () => {
@@ -194,8 +201,8 @@ function setupScene() {
     scene.sun.show = true;
     scene.moon.show = true;
 
-        // ★ QUALITY: Maximum tile resolution — no blurry start
-        scene.globe.maximumScreenSpaceError = 1;
+        // ★ QUALITY/PERF: Keep detail crisp without overloading lower-end GPUs
+        scene.globe.maximumScreenSpaceError = 1.8;
         scene.globe.preloadAncestors = true;
         scene.globe.preloadSiblings = true;
         scene.globe.tileCacheSize = 200;
@@ -208,12 +215,6 @@ function setupScene() {
     // ★ PERFORMANCE: Set rendering resolution to device pixel ratio capped at 1.5
     // This prevents over-rendering on high-DPI screens without looking blurry
     viewer.resolutionScale = Math.min(window.devicePixelRatio, 1.5);
-
-    // ★ QUALITY: Request high-res Bing Aerial with fewer blurry tiles
-    // Override base with Bing Aerial HD (already default) — force immediate tile fetch
-    viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
-        viewer.scene.requestRender();
-    });
 
     // ★ Place name labels overlay (CartoDB labels)
     const labelOverlay = new Cesium.UrlTemplateImageryProvider({
@@ -228,6 +229,7 @@ function setupScene() {
     labelOverlayImageryLayer = viewer.imageryLayers.get(viewer.imageryLayers.length - 1);
 
     document.querySelector('.app-container')?.setAttribute('data-map-view', 'satellite');
+    setupLabelOverlayByZoom();
 
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     const satBtn = document.querySelector('.nav-btn[data-view="satellite"]');
@@ -294,20 +296,6 @@ function getUserLocation() {
                     heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                     disableDepthTestDistance: Number.POSITIVE_INFINITY
                 }
-            });
-
-            // Visibility on back side
-            viewer.scene.preRender.addEventListener(() => {
-                if (!userLocationEntity) return;
-                const pos = userLocationEntity.position.getValue(viewer.clock.currentTime);
-                if (!pos) return;
-                const occluder = new Cesium.EllipsoidalOccluder(
-                    viewer.scene.globe.ellipsoid,
-                    viewer.camera.position
-                );
-                const visible = occluder.isPointVisible(pos);
-                userLocationEntity.show = visible;
-                if (userLocationPulse) userLocationPulse.show = visible;
             });
 
             // Keep watching
@@ -402,8 +390,13 @@ function startAutoRotation() {
  */
 function setupMouseTracking() {
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    let lastMouseTrackTs = 0;
 
     handler.setInputAction((movement) => {
+        const now = performance.now();
+        if (now - lastMouseTrackTs < 70) return; // throttle expensive globe picks
+        lastMouseTrackTs = now;
+
         // Use ray-cast against the actual rendered globe surface (not a smooth sphere)
         const ray = viewer.camera.getPickRay(movement.endPosition);
         const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
@@ -686,10 +679,12 @@ function setupEventListeners() {
     });
 
     // Click search button
-    searchBtn.addEventListener('click', () => {
-        performSearch();
-        hideSuggestions();
-    });
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            performSearch();
+            hideSuggestions();
+        });
+    }
 
     // Close suggestions on outside click
     document.addEventListener('click', (e) => {
@@ -1187,6 +1182,35 @@ function syncBasemapAttrib() {
 }
 
 /**
+ * Reduce initial clutter: fade/hide small text labels at high altitude.
+ */
+function setupLabelOverlayByZoom() {
+    if (!viewer || _labelOverlayMoveEndBound) return;
+    _labelOverlayMoveEndBound = () => updateLabelOverlayByZoom();
+    viewer.camera.moveEnd.addEventListener(_labelOverlayMoveEndBound);
+    updateLabelOverlayByZoom();
+}
+
+function updateLabelOverlayByZoom() {
+    if (!viewer || !labelOverlayImageryLayer) return;
+    const h = viewer.camera.positionCartographic.height;
+    const isBaseMapView = (streetMapImageryLayer && streetMapImageryLayer.show) ||
+        (googleTerrainMapImageryLayer && googleTerrainMapImageryLayer.show);
+    if (isBaseMapView) return;
+
+    let alpha = 1;
+    if (h > 2.2e7) alpha = 0.0;
+    else if (h > 1.1e7) alpha = 0.12;
+    else if (h > 5e6) alpha = 0.28;
+    else if (h > 2.2e6) alpha = 0.5;
+    else alpha = 0.78;
+
+    labelOverlayImageryLayer.show = alpha > 0.02;
+    labelOverlayImageryLayer.alpha = alpha;
+    viewer.scene.requestRender();
+}
+
+/**
  * Perform geocoding search with region boundary highlighting
  * Uses Nominatim API with polygon_geojson=1 to get real geographic boundaries
  */
@@ -1196,8 +1220,10 @@ async function performSearch() {
 
     // Visual feedback — disable button during search
     const searchBtn = document.getElementById('search-btn');
-    searchBtn.disabled = true;
-    searchBtn.style.opacity = '0.5';
+    if (searchBtn) {
+        searchBtn.disabled = true;
+        searchBtn.style.opacity = '0.5';
+    }
 
     try {
         // Fetch from Nominatim with boundary polygon — English names
@@ -1210,8 +1236,10 @@ async function performSearch() {
 
         if (data.length === 0) {
             console.log('No results found for:', query);
-            searchBtn.disabled = false;
-            searchBtn.style.opacity = '1';
+            if (searchBtn) {
+                searchBtn.disabled = false;
+                searchBtn.style.opacity = '1';
+            }
             return;
         }
 
@@ -1255,8 +1283,10 @@ async function performSearch() {
     } catch (error) {
         console.error('Search error:', error);
     } finally {
-        searchBtn.disabled = false;
-        searchBtn.style.opacity = '1';
+        if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.style.opacity = '1';
+        }
     }
 }
 

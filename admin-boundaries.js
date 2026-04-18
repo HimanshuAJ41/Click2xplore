@@ -25,16 +25,14 @@ const ProgressiveAdminBoundaries = {
     _loading: false,
     _loadedMask: 0,
     _moveEndBound: null,
-    _changedDebounce: null,
+    _lastVisibilityTier: '',
+    _countryLineColor: null,
+    _adminLineColor: null,
 
     init(viewer) {
         this.viewer = viewer;
         this._moveEndBound = () => this.updateVisibility();
         viewer.camera.moveEnd.addEventListener(this._moveEndBound);
-        viewer.camera.changed.addEventListener(() => {
-            clearTimeout(this._changedDebounce);
-            this._changedDebounce = setTimeout(() => this.updateVisibility(), 140);
-        });
         setTimeout(() => this._bootstrap(), 800);
     },
 
@@ -64,6 +62,7 @@ const ProgressiveAdminBoundaries = {
     async _loadCountries() {
         if (this._countries) return;
         const stroke = Cesium.Color.fromCssColorString('#e8f4ff').withAlpha(0.72);
+        this._countryLineColor = Cesium.Color.fromCssColorString('#e8f4ff');
         this._countries = await Cesium.GeoJsonDataSource.load(
             `${NE_GEOJSON_BASE}/ne_110m_admin_0_boundary_lines_land.geojson`,
             {
@@ -96,6 +95,7 @@ const ProgressiveAdminBoundaries = {
     async _loadAdmin1() {
         if (this._admin1) return;
         const stroke = Cesium.Color.fromCssColorString('#a8d4ff').withAlpha(0.55);
+        this._adminLineColor = Cesium.Color.fromCssColorString('#a8d4ff');
         this._admin1 = await Cesium.GeoJsonDataSource.load(
             `${NE_GEOJSON_BASE}/ne_50m_admin_1_states_provinces_lines.geojson`,
             {
@@ -111,7 +111,7 @@ const ProgressiveAdminBoundaries = {
         aj.features = (aj.features || []).filter((f) => {
             const sr = f.properties?.scalerank ?? f.properties?.SCALERANK;
             const n = typeof sr === 'number' ? sr : parseInt(sr, 10);
-            return !Number.isFinite(n) || n <= 6;
+            return !Number.isFinite(n) || n <= 4; // lower label density for smoother zooming
         });
         this._admin1Labels = await Cesium.GeoJsonDataSource.load(aj, { clampToGround: true });
         this._convertPointsToLabels(this._admin1Labels, {
@@ -143,6 +143,7 @@ const ProgressiveAdminBoundaries = {
             const rank = _neProp(entity, 'SCALERANK');
             const scalerank = typeof rank === 'number' ? rank : parseInt(rank, 10) || 10;
             entity.__scalerank = scalerank;
+            if (scalerank > 8) entity.show = false; // hide dense low-priority places by default
             if (entity.billboard) entity.billboard = undefined;
             if (entity.point) {
                 entity.point = new Cesium.PointGraphics({
@@ -157,16 +158,16 @@ const ProgressiveAdminBoundaries = {
             if (name) {
                 entity.label = new Cesium.LabelGraphics({
                     text: name,
-                    font: '500 11px Outfit,sans-serif',
-                    fillColor: Cesium.Color.WHITE,
-                    outlineColor: Cesium.Color.BLACK,
+                    font: '500 10px Outfit,sans-serif',
+                    fillColor: Cesium.Color.WHITE.withAlpha(0.88),
+                    outlineColor: Cesium.Color.BLACK.withAlpha(0.55),
                     outlineWidth: 3,
                     style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                     verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
                     pixelOffset: new Cesium.Cartesian2(0, -8),
                     heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                    scaleByDistance: new Cesium.NearFarScalar(8e3, 1.05, 4e5, 0.4),
-                    distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 6e5)
+                    scaleByDistance: new Cesium.NearFarScalar(8e3, 1.0, 2.5e5, 0.35),
+                    distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3.2e5)
                 });
             }
         }
@@ -198,6 +199,17 @@ const ProgressiveAdminBoundaries = {
         }
     },
 
+    _setLineOpacity(ds, baseColor, alpha) {
+        if (!ds || !baseColor) return;
+        const entities = ds.entities.values;
+        for (let i = 0; i < entities.length; i++) {
+            const e = entities[i];
+            if (e.polyline) {
+                e.polyline.material = baseColor.withAlpha(alpha);
+            }
+        }
+    },
+
     _convertPointsToLabels(ds, style, getName) {
         const entities = ds.entities.values;
         for (let i = 0; i < entities.length; i++) {
@@ -218,8 +230,8 @@ const ProgressiveAdminBoundaries = {
             e.label = new Cesium.LabelGraphics({
                 text,
                 font: style.font,
-                fillColor: Cesium.Color.WHITE,
-                outlineColor: Cesium.Color.BLACK,
+                fillColor: Cesium.Color.WHITE.withAlpha(0.86),
+                outlineColor: Cesium.Color.BLACK.withAlpha(0.55),
                 outlineWidth: 3,
                 style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
@@ -231,32 +243,54 @@ const ProgressiveAdminBoundaries = {
     updateVisibility() {
         if (!this.viewer) return;
         const h = this.viewer.camera.positionCartographic.height;
+        const tier =
+            h > 2.4e7 ? 'global' :
+            h > 1.1e7 ? 'continent' :
+            h > 4.2e6 ? 'country' :
+            h > 1.8e6 ? 'state' :
+            h > 7e5 ? 'region' :
+            h > 3.2e5 ? 'city-major' :
+            h > 1.5e5 ? 'city-mid' :
+            h > 7e4 ? 'city-local' : 'street';
+        if (tier === this._lastVisibilityTier) return;
+        this._lastVisibilityTier = tier;
 
-        // Country outlines: full globe down to city scale (fade out when very close)
-        const showCountries = h > 4e4 && h < 4.5e7;
+        // Country outlines: visible globally but softened at very high altitude
+        const showCountries = h > 8e4 && h < 4.5e7;
         if (this._countries) this._countries.show = showCountries;
+        const countryAlpha =
+            h > 2.4e7 ? 0.10 :
+            h > 1.1e7 ? 0.20 :
+            h > 4.2e6 ? 0.32 :
+            h > 1.8e6 ? 0.42 : 0.55;
+        this._setLineOpacity(this._countries, this._countryLineColor, countryAlpha);
 
-        // Country names: world → multi-country framing
-        const showCountryLabels = h > 2.5e6 && h < 2.2e7;
+        // Country names: hide at first-look globe, show on closer regional view
+        const showCountryLabels = h > 1.8e6 && h < 8e6;
         if (this._countryLabels) this._countryLabels.show = showCountryLabels;
 
-        // States / provinces: after “country” scale, hide when street-level
-        const showAdmin1Lines = h > 4e4 && h < 9e6;
+        // States / provinces: only once user starts zooming in
+        const showAdmin1Lines = h > 1.4e5 && h < 2.2e6;
         if (this._admin1) this._admin1.show = showAdmin1Lines;
+        const adminAlpha =
+            h > 1.8e6 ? 0.12 :
+            h > 7e5 ? 0.20 :
+            h > 3.2e5 ? 0.28 : 0.38;
+        this._setLineOpacity(this._admin1, this._adminLineColor, adminAlpha);
 
-        const showAdmin1Labels = h > 8e4 && h < 3e6;
+        const showAdmin1Labels = h > 2.2e5 && h < 1.1e6;
         if (this._admin1Labels) this._admin1Labels.show = showAdmin1Labels;
 
-        // Cities / towns: SCALERANK reveals more placenames as you zoom in
+        // Cities / towns: keep startup globe clean, reveal details progressively
         if (this._places && this._placeEntities.length) {
-            const showPlaces = h < 1.4e6;
+            const showPlaces = h < 5e5;
             this._places.show = showPlaces;
             let maxRank = 10;
-            if (h > 6e5) maxRank = 2;
-            else if (h > 2.5e5) maxRank = 4;
-            else if (h > 9e4) maxRank = 6;
-            else if (h > 3.5e4) maxRank = 8;
-            else maxRank = 10;
+            if (h > 3.2e5) maxRank = 1;
+            else if (h > 1.5e5) maxRank = 2;
+            else if (h > 7e4) maxRank = 3;
+            else if (h > 4e4) maxRank = 4;
+            else maxRank = 6;
 
             for (let i = 0; i < this._placeEntities.length; i++) {
                 const e = this._placeEntities[i];
@@ -269,7 +303,6 @@ const ProgressiveAdminBoundaries = {
     },
 
     destroy() {
-        clearTimeout(this._changedDebounce);
         if (this.viewer && this._moveEndBound) {
             this.viewer.camera.moveEnd.removeEventListener(this._moveEndBound);
         }
