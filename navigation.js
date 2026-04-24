@@ -33,6 +33,8 @@ class NavigationSystem {
         this.waypoints = [];
         this.pickOverlay = null;
         this._panelExpanded = false;
+        this._startCountry = null;  // Country code for start location (e.g. 'IN', 'US')
+        this._destCountry = null;   // Country code for destination
         // ── ORS Configuration ─────────────────────────────────────────────
         // Replace 'YOUR_FREE_ORS_KEY' with your key from:
         // https://openrouteservice.org/dev/#/signup  (free: 2000 req/day, 40 req/min)
@@ -41,9 +43,12 @@ class NavigationSystem {
         // ─────────────────────────────────────────────────────────────────
 
         this.profiles = {
-            driving: { label: '🚗 Car', ors: 'driving-car', speed: 40, color: '#4285F4', alternatives: true },
-            cycling: { label: '🚲 Bike', ors: 'cycling-regular', speed: 15, color: '#34A853', alternatives: true },
-            walking: { label: '🚶 Walk', ors: 'foot-walking', speed: 5, color: '#FF6B35', alternatives: true },
+            driving:  { label: '🚗 Car',   ors: 'driving-car',     speed: 50,  color: '#4285F4', alternatives: true,  routable: true },
+            cycling:  { label: '🏍️ Bike',  ors: 'driving-car',     speed: 45,  color: '#34A853', alternatives: true,  routable: true },
+            walking:  { label: '🚶 Walk',  ors: 'foot-walking',    speed: 5,   color: '#FF6B35', alternatives: true,  routable: true },
+            train:    { label: '🚆 Train', ors: null,              speed: 80,  color: '#9C27B0', alternatives: false, routable: false },
+            bus:      { label: '🚌 Bus',   ors: null,              speed: 35,  color: '#E91E63', alternatives: false, routable: false },
+            flight:   { label: '✈️ Flight', ors: null,              speed: 800, color: '#00BCD4', alternatives: false, routable: false },
         };
         this.init();
     }
@@ -77,6 +82,10 @@ class NavigationSystem {
     // Pick-on-map overlay (minimal — just a banner at top)
     // ═══════════════════════════════════════════════════════════
     createPickOverlay() {
+        // ★ FIX: Remove any existing pick overlay to prevent duplicates
+        const existingOverlay = document.getElementById('pick-overlay');
+        if (existingOverlay) existingOverlay.remove();
+
         const overlay = document.createElement('div');
         overlay.id = 'pick-overlay';
         overlay.className = 'pick-overlay';
@@ -96,6 +105,10 @@ class NavigationSystem {
     // Nav Panel — Google Maps style
     // ═══════════════════════════════════════════════════════════
     createNavPanel() {
+        // ★ FIX: Remove any existing nav panel to prevent duplicates
+        const existingPanel = document.getElementById('nav-panel');
+        if (existingPanel) existingPanel.remove();
+
         const panel = document.createElement('div');
         panel.id = 'nav-panel';
         panel.className = 'nav-panel glass-effect';
@@ -162,6 +175,9 @@ class NavigationSystem {
                     <button class="mode-btn active" data-mode="driving">🚗<span>Car</span></button>
                     <button class="mode-btn" data-mode="cycling">🚲<span>Bike</span></button>
                     <button class="mode-btn" data-mode="walking">🚶<span>Walk</span></button>
+                    <button class="mode-btn" data-mode="train">🚆<span>Train</span></button>
+                    <button class="mode-btn" data-mode="bus">🚌<span>Bus</span></button>
+                    <button class="mode-btn" data-mode="flight">✈️<span>Flight</span></button>
                 </div>
 
                 <!-- Avoid options (shown for driving/cycling) -->
@@ -217,7 +233,15 @@ class NavigationSystem {
                 // Show avoid options only for driving / cycling
                 const avoidRow = panel.querySelector('#nav-avoid-row');
                 avoidRow.style.display = ['driving', 'cycling'].includes(btn.dataset.mode) ? 'flex' : 'none';
-                if (this.destLat) this.fetchRoute();
+                if (this.destLat) {
+                    const profile = this.profiles[this.selectedMode];
+                    if (profile && !profile.routable) {
+                        // Non-routable modes: show estimated info with app links
+                        this._showEstimatedRoute(profile);
+                    } else {
+                        this.fetchRoute();
+                    }
+                }
             });
         });
 
@@ -341,19 +365,24 @@ class NavigationSystem {
         if (!this._panelExpanded) this._toggleExpand();
 
         let name = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+        let countryCode = null;
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=en`);
             const data = await res.json();
             if (data.display_name) {
                 name = data.display_name.split(',').slice(0, 2).join(',').trim();
             }
+            // ★ Extract country code for international route detection
+            countryCode = data.address?.country_code?.toUpperCase() || null;
         } catch (e) { /* use coords */ }
 
         if (this.pickTarget === 'start') {
             this.startLat = lat; this.startLon = lon; this.startName = name;
+            if (countryCode) this._startCountry = countryCode;
             this.navPanel.querySelector('#nav-from').value = name;
         } else if (this.pickTarget === 'end') {
             this.destLat = lat; this.destLon = lon; this.destName = name;
+            if (countryCode) this._destCountry = countryCode;
             this.navPanel.querySelector('#nav-to').value = name;
         } else if (this.pickTarget?.startsWith('waypoint-')) {
             const idx = parseInt(this.pickTarget.split('-')[1]);
@@ -379,6 +408,9 @@ class NavigationSystem {
         this._panelExpanded = false;
         this._toggleExpand(); // open expanded
 
+        // ★ Fetch country codes for both start and destination (non-blocking)
+        this._resolveCountryCodes(destLat, destLon);
+
         // Get fresh user location
         if ('geolocation' in navigator) {
             try {
@@ -398,12 +430,44 @@ class NavigationSystem {
         this.fetchRoute();
     }
 
+    /** Resolve country codes for start/destination to enable accurate international detection */
+    async _resolveCountryCodes(destLat, destLon) {
+        try {
+            // Fetch both in parallel
+            const [startRes, destRes] = await Promise.allSettled([
+                this.startLat ? fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${this.startLat}&lon=${this.startLon}&accept-language=en&zoom=3`)
+                    .then(r => r.json()).then(d => d.address?.country_code?.toUpperCase()) : Promise.resolve(null),
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${destLat}&lon=${destLon}&accept-language=en&zoom=3`)
+                    .then(r => r.json()).then(d => d.address?.country_code?.toUpperCase())
+            ]);
+
+            if (startRes.status === 'fulfilled' && startRes.value) this._startCountry = startRes.value;
+            if (destRes.status === 'fulfilled' && destRes.value) this._destCountry = destRes.value;
+
+            // Re-evaluate mode availability now that we have country info
+            if (this._startCountry && this._destCountry && this.destLat) {
+                const dist = this.haversine(this.startLat, this.startLon, this.destLat, this.destLon);
+                this.updateModeAvailability(dist);
+                // If mode changed due to international detection, re-fetch route
+                const profile = this.profiles[this.selectedMode];
+                if (profile && !profile.routable) {
+                    this._showEstimatedRoute(profile);
+                } else if (profile) {
+                    this.fetchRoute();
+                }
+            }
+        } catch (e) { /* country detection is best-effort */ }
+    }
+
     hide() {
         this.navPanel.classList.remove('visible');
         this.navPanel.classList.remove('panel-expanded');
         const body = this.navPanel.querySelector('#nav-body');
         body.classList.remove('expanded');
         this._panelExpanded = false;
+        // ★ Reset country codes for fresh detection next time
+        this._startCountry = null;
+        this._destCountry = null;
         this.clearRoute();
         this.stopLiveNavigation();
         this.cancelPick();
@@ -440,6 +504,12 @@ class NavigationSystem {
         if (!profile) {
             this.selectedMode = 'driving';
             return this.fetchRoute();
+        }
+
+        // ★ Non-routable modes (train/bus/flight) — show estimated info with app links
+        if (!profile.routable) {
+            this._showEstimatedRoute(profile);
+            return;
         }
 
         // If ORS key is still the placeholder, skip straight to OSRM fallback
@@ -509,9 +579,15 @@ class NavigationSystem {
             }
 
             // Convert ORS GeoJSON features to internal route objects
-            this.currentRoutes = features.map(f => ({
-                distance: f.properties.summary.distance * 1000, // ORS returns km, convert to m
-                duration: f.properties.summary.duration,
+            this.currentRoutes = features.map(f => {
+                let dur = f.properties.summary.duration;
+                // Motorcycles (Bike) often filter through traffic, saving ~15% time compared to cars
+                if (profile.label.includes('Bike') && profile.ors === 'driving-car') {
+                    dur = dur * 0.85;
+                }
+                return {
+                    distance: f.properties.summary.distance * 1000, // ORS returns km, convert to m
+                    duration: dur,
                 geometry: f.geometry,
                 legs: [{
                     steps: (f.properties.segments?.[0]?.steps || []).map(s => ({
@@ -528,9 +604,10 @@ class NavigationSystem {
                 ascent: f.properties.ascent,
                 descent: f.properties.descent,
                 warnings: f.properties.warnings || []
-            }));
+            };
+        });
 
-            this.selectedRouteIdx = 0;
+        this.selectedRouteIdx = 0;
 
             this.renderRouteOptions(this.currentRoutes, profile);
             this.showRouteDetails(0, profile);
@@ -570,12 +647,28 @@ class NavigationSystem {
             this.waypoints.forEach(wp => { if (wp.lat && wp.lon) coords += `;${wp.lon},${wp.lat}`; });
             coords += `;${this.destLon},${this.destLat}`;
 
-            const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${coords}` +
+            // Try the requested profile first
+            let url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${coords}` +
                 `?overview=full&geometries=geojson&steps=true&alternatives=${wantAlts ? 'true' : 'false'}`;
-            const response = await fetch(url);
-            const data = await response.json();
+            let response = await fetch(url);
+            let data = await response.json();
 
-            if (data.code !== 'Ok' || !data.routes.length) {
+            // ★ OSRM demo server often only supports 'driving'. If the requested
+            // profile fails, fall back to 'driving' route geometry but recalculate
+            // the duration using the mode's actual average speed.
+            let usedFallbackSpeed = false;
+            if (data.code !== 'Ok' || !data.routes?.length) {
+                if (osrmProfile !== 'driving') {
+                    // Re-fetch with driving profile for the geometry
+                    url = `https://router.project-osrm.org/route/v1/driving/${coords}` +
+                        `?overview=full&geometries=geojson&steps=true&alternatives=${wantAlts ? 'true' : 'false'}`;
+                    response = await fetch(url);
+                    data = await response.json();
+                    usedFallbackSpeed = true;
+                }
+            }
+
+            if (data.code !== 'Ok' || !data.routes?.length) {
                 info.innerHTML = '<p class="route-error">❌ No route found. Try a different mode.</p>';
                 return;
             }
@@ -587,6 +680,24 @@ class NavigationSystem {
             if (!wantAlts && routes.length > 1) {
                 routes = routes.slice(0, 1);
             }
+
+            // ★ FIX: Recalculate durations based on mode-specific speed.
+            // OSRM demo server returns driving-speed durations even for cycling/foot,
+            // so we recalculate to give accurate per-mode estimates.
+            if (usedFallbackSpeed || osrmProfile !== 'driving' || profile.label.includes('Bike')) {
+                routes = routes.map(r => {
+                    let dur = (r.distance / 1000 / profile.speed) * 3600; // seconds = (km / speed) * 3600
+                    // If native driving duration was successful for Bike, reduce by 15% for traffic filtering
+                    if (profile.label.includes('Bike') && !usedFallbackSpeed && osrmProfile === 'driving') {
+                        dur = r.duration * 0.85;
+                    }
+                    return {
+                        ...r,
+                        duration: dur
+                    };
+                });
+            }
+
             this.currentRoutes = routes;
             this.selectedRouteIdx = 0;
 
@@ -817,23 +928,23 @@ class NavigationSystem {
         // Markers
         this.routeEntities.push(this.viewer.entities.add({
             position: Cesium.Cartesian3.fromDegrees(this.startLon, this.startLat),
-            point: { pixelSize: 14, color: Cesium.Color.fromCssColorString('#34A853'), outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-            label: { text: 'Start', font: '12px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -18), disableDepthTestDistance: Number.POSITIVE_INFINITY }
+            point: { pixelSize: 14, color: Cesium.Color.fromCssColorString('#34A853'), outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 1.2e7 },
+            label: { text: 'Start', font: '12px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -18), disableDepthTestDistance: 1.2e7 }
         }));
 
         this.waypoints.forEach(wp => {
             if (!wp.lat) return;
             this.routeEntities.push(this.viewer.entities.add({
                 position: Cesium.Cartesian3.fromDegrees(wp.lon, wp.lat),
-                point: { pixelSize: 12, color: Cesium.Color.ORANGE, outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-                label: { text: wp.name, font: '11px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -16), disableDepthTestDistance: Number.POSITIVE_INFINITY }
+                point: { pixelSize: 12, color: Cesium.Color.ORANGE, outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 1.2e7 },
+                label: { text: wp.name, font: '11px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -16), disableDepthTestDistance: 1.2e7 }
             }));
         });
 
         this.routeEntities.push(this.viewer.entities.add({
             position: Cesium.Cartesian3.fromDegrees(this.destLon, this.destLat),
-            point: { pixelSize: 14, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-            label: { text: this.destName, font: '12px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -18), disableDepthTestDistance: Number.POSITIVE_INFINITY }
+            point: { pixelSize: 14, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 1.2e7 },
+            label: { text: this.destName, font: '12px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -18), disableDepthTestDistance: 1.2e7 }
         }));
 
         this.flyToFitRoute(sel.geometry.coordinates);
@@ -874,6 +985,25 @@ class NavigationSystem {
         const step = Math.max(1, Math.floor(coordinates.length / 5));
         for (let i = 0; i < coordinates.length; i += step) samplePoints.push(coordinates[i]);
 
+        // ★ PlacesDB: Instantly fetch local landmarks along the route
+        let localPOIs = [];
+        if (typeof PlacesDB !== 'undefined') {
+            const seen = new Set();
+            samplePoints.forEach(c => {
+                PlacesDB.near(c[1], c[0], 5).forEach(p => { // 5km radius from route
+                    if (!seen.has(p.name)) {
+                        seen.add(p.name);
+                        localPOIs.push({
+                            name: p.name, lat: p.lat, lon: p.lon,
+                            dist: this.haversine(this.startLat, this.startLon, p.lat, p.lon),
+                            icon: p.icon || '📍', type: p.type || 'Place'
+                        });
+                    }
+                });
+            });
+            localPOIs.sort((a, b) => a.dist - b.dist);
+        }
+
         try {
             const aroundParts = samplePoints.map(c => `(around:3000,${c[1]},${c[0]})`);
             const mid = Math.floor(aroundParts.length / 2);
@@ -900,6 +1030,16 @@ class NavigationSystem {
             restaurants.sort((a, b) => a.dist - b.dist);
 
             let html = '';
+
+            // ★ Local landmarks from PlacesDB (instant, offline)
+            if (localPOIs.length > 0) {
+                html += '<h4>📍 Notable Places</h4>';
+                html += localPOIs.slice(0, 4).map(p => {
+                    this.addPOIMarker(p.lat, p.lon, p.name, p.icon);
+                    return `<div class="poi-item"><span class="poi-icon">${p.icon}</span><span class="poi-name">${p.name}</span><span class="poi-dist">${p.dist.toFixed(1)} km</span></div>`;
+                }).join('');
+            }
+
             if (fuel.length > 0) {
                 html += '<h4>⛽ Fuel Stations</h4>';
                 html += fuel.slice(0, 3).map(f => {
@@ -917,15 +1057,25 @@ class NavigationSystem {
 
             pois.innerHTML = html || '<p class="route-note">No stops found along this route.</p>';
         } catch (err) {
-            pois.innerHTML = '<p class="route-note">Could not load stops.</p>';
+            // Even if Overpass fails, show local POIs from PlacesDB
+            if (localPOIs.length > 0) {
+                let html = '<h4>📍 Notable Places</h4>';
+                html += localPOIs.slice(0, 6).map(p => {
+                    this.addPOIMarker(p.lat, p.lon, p.name, p.icon);
+                    return `<div class="poi-item"><span class="poi-icon">${p.icon}</span><span class="poi-name">${p.name}</span><span class="poi-dist">${p.dist.toFixed(1)} km</span></div>`;
+                }).join('');
+                pois.innerHTML = html;
+            } else {
+                pois.innerHTML = '<p class="route-note">Could not load stops.</p>';
+            }
         }
     }
 
     addPOIMarker(lat, lon, name, icon) {
         const entity = this.viewer.entities.add({
             position: Cesium.Cartesian3.fromDegrees(lon, lat),
-            point: { pixelSize: 8, color: Cesium.Color.YELLOW, outlineColor: Cesium.Color.BLACK, outlineWidth: 1, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-            label: { text: `${icon} ${name}`, font: '10px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 1, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -12), disableDepthTestDistance: Number.POSITIVE_INFINITY, scaleByDistance: new Cesium.NearFarScalar(500, 1.0, 50000, 0.3) }
+            point: { pixelSize: 8, color: Cesium.Color.YELLOW, outlineColor: Cesium.Color.BLACK, outlineWidth: 1, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 1.2e7 },
+            label: { text: `${icon} ${name}`, font: '10px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 1, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -12), disableDepthTestDistance: 1.2e7, scaleByDistance: new Cesium.NearFarScalar(500, 1.0, 50000, 0.3) }
         });
         this.poiEntities.push(entity);
     }
@@ -956,8 +1106,8 @@ class NavigationSystem {
 
         this.navTracker = this.viewer.entities.add({
             position: Cesium.Cartesian3.fromDegrees(this.startLon, this.startLat),
-            point: { pixelSize: 16, color: Cesium.Color.fromCssColorString('#4285F4'), outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-            label: { text: '📍 You', font: 'bold 13px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.fromCssColorString('#4285F4'), outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -20), disableDepthTestDistance: Number.POSITIVE_INFINITY }
+            point: { pixelSize: 16, color: Cesium.Color.fromCssColorString('#4285F4'), outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 1.2e7 },
+            label: { text: '📍 You', font: 'bold 13px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.fromCssColorString('#4285F4'), outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -20), disableDepthTestDistance: 1.2e7 }
         });
 
         this.viewer.camera.flyTo({
@@ -1007,26 +1157,256 @@ class NavigationSystem {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // Dynamic transport mode filtering
+    // Dynamic transport mode filtering — distance & country-aware
     // ═══════════════════════════════════════════════════════════
     updateModeAvailability(distKm) {
-        const rules = {
-            driving: { min: 0, max: Infinity },
-            cycling: { min: 0, max: Infinity },
-            walking: { min: 0, max: Infinity },
-        };
+        const isInternational = this._isInternationalRoute();
+
+        // ★ FIX: Smart mode filtering based on distance + international status
+        // International routes → only flight is available
+        // Domestic routes → show relevant ground transport based on distance
+        const rules = isInternational
+            ? {
+                // ── Out of country: ONLY flight ──
+                driving:  { show: false, unavailable: true },
+                cycling:  { show: false, unavailable: true },
+                walking:  { show: false, unavailable: true },
+                train:    { show: false, unavailable: true },
+                bus:      { show: false, unavailable: true },
+                flight:   { show: true,  unavailable: false },
+            }
+            : {
+                // ── Inside country: ALL options ──
+                driving:  { show: true,  unavailable: false },
+                cycling:  { show: true,  unavailable: false },
+                walking:  { show: true,  unavailable: false },
+                train:    { show: true,  unavailable: false },
+                bus:      { show: true,  unavailable: false },
+                flight:   { show: true,  unavailable: false },
+            };
+
         this.navPanel.querySelectorAll('.mode-btn').forEach(btn => {
-            const rule = rules[btn.dataset.mode];
-            const unavailable = !rule || distKm < rule.min || distKm > rule.max;
-            btn.classList.toggle('unavailable', unavailable);
-            btn.disabled = unavailable;
+            const mode = btn.dataset.mode;
+            const rule = rules[mode];
+            if (!rule) return;
+
+            // Show/hide button based on relevance
+            btn.style.display = rule.show ? '' : 'none';
+
+            // Mark as unavailable (greyed out) vs fully hidden
+            btn.classList.toggle('unavailable', rule.unavailable);
+            btn.disabled = rule.unavailable;
         });
+
+        // If current mode is now unavailable or hidden, auto-select the best available
         const cur = this.navPanel.querySelector(`.mode-btn[data-mode="${this.selectedMode}"]`);
-        if (cur?.classList.contains('unavailable')) {
-            this.selectedMode = 'driving';
+        if (cur?.classList.contains('unavailable') || cur?.style.display === 'none') {
+            // Pick first available visible mode
+            const fallback = isInternational ? 'flight' : 'driving';
+            this.selectedMode = fallback;
             this.navPanel.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            this.navPanel.querySelector('.mode-btn[data-mode="driving"]')?.classList.add('active');
+            this.navPanel.querySelector(`.mode-btn[data-mode="${fallback}"]`)?.classList.add('active');
         }
+    }
+
+    /** Detect international route using reverse-geocoded country codes or heuristics */
+    _isInternationalRoute() {
+        if (!this.startLat || !this.destLat) return false;
+
+        // ★ Use stored country codes from reverse geocoding if available
+        if (this._startCountry && this._destCountry) {
+            return this._startCountry !== this._destCountry;
+        }
+
+        // Heuristic fallback: large coordinate difference suggests cross-border
+        const dist = this.haversine(this.startLat, this.startLon, this.destLat, this.destLon);
+
+        // Very long distance (>3500km) almost certainly international
+        if (dist > 3500) return true;
+
+        // Check if lat/lon span suggests different country regions
+        const latDiff = Math.abs(this.startLat - this.destLat);
+        const lonDiff = Math.abs(this.startLon - this.destLon);
+
+        // Large coordinate shifts (>20°) in either direction suggest cross-border
+        if (latDiff > 20 || lonDiff > 20) return true;
+
+        return false;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Estimated Route for non-routable modes (train/bus/flight)
+    // ═══════════════════════════════════════════════════════════
+    _showEstimatedRoute(profile) {
+        const info = this.navPanel.querySelector('#nav-route-info');
+        const steps = this.navPanel.querySelector('#nav-steps');
+        const pois = this.navPanel.querySelector('#nav-pois');
+        const routesList = this.navPanel.querySelector('#nav-routes-list');
+        this.navPanel.querySelector('#elevation-chart')?.remove();
+
+        steps.innerHTML = '';
+        routesList.innerHTML = '';
+        pois.innerHTML = '';
+
+        if (!this.startLat || !this.destLat) {
+            info.innerHTML = '<p class="route-note">Set both start and destination.</p>';
+            return;
+        }
+
+        const distKm = this.haversine(this.startLat, this.startLon, this.destLat, this.destLon);
+        const estMinutes = (distKm / profile.speed) * 60;
+        const dur = this.formatDuration(estMinutes);
+
+        // Build app reference links based on mode
+        let appLinks = '';
+        let modeNote = '';
+
+        if (this.selectedMode === 'train') {
+            modeNote = 'Estimated based on avg train speed (~80 km/h). Check real schedules:';
+            appLinks = `
+                <div class="transit-app-links">
+                    <a href="https://www.wheresmytrain.in/" target="_blank" class="transit-link">
+                        <span class="transit-icon">🚆</span>
+                        <span>Where is my Train</span>
+                    </a>
+                    <a href="https://m-indicator.toolset.io/" target="_blank" class="transit-link">
+                        <span class="transit-icon">📱</span>
+                        <span>M-Indicator</span>
+                    </a>
+                    <a href="https://www.irctc.co.in/" target="_blank" class="transit-link">
+                        <span class="transit-icon">🎫</span>
+                        <span>IRCTC Booking</span>
+                    </a>
+                </div>`;
+        } else if (this.selectedMode === 'bus') {
+            modeNote = 'Estimated based on avg bus speed (~35 km/h). Book tickets:';
+            appLinks = `
+                <div class="transit-app-links">
+                    <a href="https://www.chaloapp.com/" target="_blank" class="transit-link">
+                        <span class="transit-icon">🚌</span>
+                        <span>Chalo (City Bus)</span>
+                    </a>
+                    <a href="https://www.redbus.in/" target="_blank" class="transit-link">
+                        <span class="transit-icon">🎫</span>
+                        <span>RedBus</span>
+                    </a>
+                    <a href="https://www.abhibus.com/" target="_blank" class="transit-link">
+                        <span class="transit-icon">🚐</span>
+                        <span>AbhiBus</span>
+                    </a>
+                </div>`;
+        } else if (this.selectedMode === 'flight') {
+            modeNote = 'Estimated based on avg flight speed (~800 km/h) + transit time. Search flights:';
+            // Add ~2h for airport procedures
+            const flightMin = estMinutes + 120;
+            const flightDur = this.formatDuration(flightMin);
+            appLinks = `
+                <div class="transit-app-links">
+                    <a href="https://www.google.com/travel/flights?q=flights+from+${encodeURIComponent(this.startName)}+to+${encodeURIComponent(this.destName)}" target="_blank" class="transit-link">
+                        <span class="transit-icon">✈️</span>
+                        <span>Google Flights</span>
+                    </a>
+                    <a href="https://www.makemytrip.com/flights/" target="_blank" class="transit-link">
+                        <span class="transit-icon">🎫</span>
+                        <span>MakeMyTrip</span>
+                    </a>
+                    <a href="https://www.skyscanner.co.in/" target="_blank" class="transit-link">
+                        <span class="transit-icon">🔍</span>
+                        <span>Skyscanner</span>
+                    </a>
+                </div>`;
+            // Override duration to include airport time
+            info.innerHTML = `
+                <div class="route-summary">
+                    <div class="route-stat primary-stat">
+                        <span class="stat-value">${flightDur}</span>
+                        <span class="stat-label">Total (incl. airport)</span>
+                    </div>
+                    <div class="route-stat">
+                        <span class="stat-value">${distKm.toFixed(0)} km</span>
+                        <span class="stat-label">Distance</span>
+                    </div>
+                    <div class="route-stat">
+                        <span class="stat-value">${profile.label}</span>
+                        <span class="stat-label">Mode</span>
+                    </div>
+                </div>
+                <p class="route-note transit-note">⏱️ Flight time ~${dur} + ~2h airport procedures</p>
+                <p class="route-note transit-note">${modeNote}</p>
+                ${appLinks}
+            `;
+
+            // Draw straight-line path for flight
+            this._drawStraightLine(profile);
+            this.navPanel.querySelector('#start-nav-btn').style.display = 'none';
+            this._updateCollapsedSummary({ distance: distKm * 1000, duration: flightMin * 60 }, profile);
+            return;
+        }
+
+        info.innerHTML = `
+            <div class="route-summary">
+                <div class="route-stat primary-stat">
+                    <span class="stat-value">${dur}</span>
+                    <span class="stat-label">Estimated Time</span>
+                </div>
+                <div class="route-stat">
+                    <span class="stat-value">${distKm.toFixed(1)} km</span>
+                    <span class="stat-label">Distance</span>
+                </div>
+                <div class="route-stat">
+                    <span class="stat-value">${profile.label}</span>
+                    <span class="stat-label">Mode</span>
+                </div>
+            </div>
+            <p class="route-note transit-note">📌 ${modeNote}</p>
+            ${appLinks}
+        `;
+
+        // Draw straight-line path
+        this._drawStraightLine(profile);
+
+        // No live navigation for transit
+        this.navPanel.querySelector('#start-nav-btn').style.display = 'none';
+        this._updateCollapsedSummary({ distance: distKm * 1000, duration: estMinutes * 60 }, profile);
+    }
+
+    /** Draw a dashed straight line for non-routable modes */
+    _drawStraightLine(profile) {
+        this.clearRoute();
+        const color = Cesium.Color.fromCssColorString(profile.color);
+        const positions = [
+            Cesium.Cartesian3.fromDegrees(this.startLon, this.startLat),
+            Cesium.Cartesian3.fromDegrees(this.destLon, this.destLat)
+        ];
+
+        // Dashed line
+        this.routeEntities.push(this.viewer.entities.add({
+            polyline: {
+                positions,
+                width: 4,
+                material: new Cesium.PolylineDashMaterialProperty({
+                    color: color.withAlpha(0.7),
+                    dashLength: 16
+                }),
+                clampToGround: true
+            }
+        }));
+
+        // Start marker
+        this.routeEntities.push(this.viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(this.startLon, this.startLat),
+            point: { pixelSize: 14, color: Cesium.Color.fromCssColorString('#34A853'), outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND },
+            label: { text: 'Start', font: '12px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -18) }
+        }));
+
+        // End marker
+        this.routeEntities.push(this.viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(this.destLon, this.destLat),
+            point: { pixelSize: 14, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND },
+            label: { text: this.destName, font: '12px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -18) }
+        }));
+
+        this.flyToFitRoute([[this.startLon, this.startLat], [this.destLon, this.destLat]]);
     }
 
     // ═══════════════════════════════════════════════════════════

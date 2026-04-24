@@ -432,17 +432,30 @@ function setupMouseTracking() {
 
         if (cartesian && Cesium.defined(cartesian)) {
             const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-            const lat = Cesium.Math.toDegrees(cartographic.latitude);
-            const lon = Cesium.Math.toDegrees(cartographic.longitude);
+            let lat = Cesium.Math.toDegrees(cartographic.latitude);
+            let lon = Cesium.Math.toDegrees(cartographic.longitude);
+            let clickedName = null;
 
-            // Add marker pin at the exact clicked location
-            addMarker(lat, lon, 'Selected Location');
+            // ★ SNAP FIX: If clicked near a known database place, use its exact
+            // coordinates + name so the info panel shows the correct place.
+            // Without this, reverse-geocoding raw click coords often returns
+            // a nearby street/district instead of the intended landmark.
+            if (typeof PlacesDB !== 'undefined') {
+                const nearby = PlacesDB.near(lat, lon, 0.5); // 500m snap radius
+                if (nearby.length > 0) {
+                    const match = nearby[0];
+                    lat = match.lat;
+                    lon = match.lon;
+                    clickedName = match.name;
+                }
+            }
 
+            // Add marker pin at the location
+            addMarker(lat, lon, clickedName || 'Selected Location');
 
-
-            // Show detailed info panel
+            // Show detailed info panel with known name (or null for reverse-geocode)
             if (locationInfoPanel) {
-                locationInfoPanel.show(lat, lon, null);
+                locationInfoPanel.show(lat, lon, clickedName);
             }
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -467,7 +480,7 @@ function addMarker(lat, lon, name) {
             outlineColor: Cesium.Color.WHITE,
             outlineWidth: 3,
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            disableDepthTestDistance: Number.POSITIVE_INFINITY
+            disableDepthTestDistance: 1.2e7 // Prevent terrain clipping but still occlude on opposite side
         }
     });
 
@@ -775,12 +788,7 @@ function setupEventListeners() {
         }
 
         // ★ INSTANT: search local famous places database (<1ms)
-        const localMatches = FAMOUS_PLACES.filter(p => {
-            const nameMatch = p.name.toLowerCase().includes(q);
-            const detailMatch = p.detail.toLowerCase().includes(q);
-            const tagMatch = p.tags ? p.tags.some(t => t.includes(q)) : false;
-            return nameMatch || detailMatch || tagMatch;
-        }).slice(0, 6);
+        const localMatches = (typeof PlacesDB !== 'undefined' ? PlacesDB.search(q) : []).slice(0, 6);
 
         // Show local results IMMEDIATELY
         if (localMatches.length > 0) {
@@ -1071,18 +1079,18 @@ function changeView(view) {
         case 'street':
             globe.enableLighting = true;
             globe.showGroundAtmosphere = false;
-            globe.terrainExaggeration = 1.12;
-            scene.fog.density = 0.00007;
-            scene.fog.minimumBrightness = 0.06;
-            showStreetMapLayer();
+            globe.terrainExaggeration = 1.08;
+            scene.fog.density = 0.00006;
+            scene.fog.minimumBrightness = 0.07;
+            void showGoogleTerrainMapLayer(); // Esri World Topo acts as Street Map
             break;
         case 'terrain':
             globe.enableLighting = true;
             globe.showGroundAtmosphere = false;
-            globe.terrainExaggeration = 1.08;
-            scene.fog.density = 0.00006;
-            scene.fog.minimumBrightness = 0.07;
-            void showGoogleTerrainMapLayer();
+            globe.terrainExaggeration = 1.12;
+            scene.fog.density = 0.00007;
+            scene.fog.minimumBrightness = 0.06;
+            showStreetMapLayer(); // OpenTopoMap acts as Terrain Map
             break;
         default:
             hideCleanMapLayer();
@@ -1603,28 +1611,46 @@ function showError(message) {
 // Cycles world wonders one-by-one as beautiful toasts
 // ═══════════════════════════════════════════════════════
 
-const WONDER_PLACES = [
-    { icon: '🗼', name: 'Eiffel Tower',       detail: 'Paris, France',               lat: 48.8584,  lon: 2.2945,    label: '🌍 World Wonder' },
-    { icon: '🕌', name: 'Taj Mahal',           detail: 'Agra, India',                 lat: 27.1751,  lon: 78.0421,   label: '🌍 World Wonder' },
-    { icon: '🏯', name: 'Great Wall of China', detail: 'Beijing, China',              lat: 40.4319,  lon: 116.5704,  label: '🌍 World Wonder' },
-    { icon: '✝️', name: 'Christ the Redeemer', detail: 'Rio de Janeiro, Brazil',      lat: -22.9519, lon: -43.2105,  label: '🌍 World Wonder' },
-    { icon: '🏟️', name: 'Colosseum',           detail: 'Rome, Italy',                 lat: 41.8902,  lon: 12.4922,   label: '🏛️ Ancient Marvel' },
-    { icon: '🏛️', name: 'Machu Picchu',        detail: 'Cusco, Peru',                 lat: -13.1631, lon: -72.5450,  label: '🏛️ Ancient Marvel' },
-    { icon: '🔺', name: 'Pyramids of Giza',    detail: 'Cairo, Egypt',                lat: 29.9792,  lon: 31.1342,   label: '🏛️ Ancient Marvel' },
-    { icon: '🪨', name: 'Stonehenge',          detail: 'Wiltshire, UK',               lat: 51.1789,  lon: -1.8262,   label: '🔮 Mystical Place' },
-    { icon: '🏛️', name: 'Angkor Wat',          detail: 'Cambodia',                    lat: 13.4125,  lon: 103.8670,  label: '🌿 Hidden Gem' },
-    { icon: '🗻', name: 'Mount Fuji',          detail: 'Japan',                       lat: 35.3606,  lon: 138.7274,  label: '🏔️ Natural Wonder' },
-    { icon: '🌊', name: 'Niagara Falls',       detail: 'Ontario, Canada',             lat: 43.0896,  lon: -79.0849,  label: '🏔️ Natural Wonder' },
-    { icon: '🏜️', name: 'Grand Canyon',        detail: 'Arizona, USA',                lat: 36.1069,  lon: -112.1129, label: '🏔️ Natural Wonder' },
-    { icon: '🏔️', name: 'Mount Everest',       detail: 'Nepal / China',               lat: 27.9881,  lon: 86.9250,   label: '🏔️ Natural Wonder' },
-    { icon: '🪸', name: 'Great Barrier Reef',  detail: 'Australia',                   lat: -18.2871, lon: 147.6992,  label: '🌊 Ocean Wonder' },
-    { icon: '🏝️', name: 'Santorini',           detail: 'Greece',                      lat: 36.3932,  lon: 25.4615,   label: '🌅 Dream Destination' },
-    { icon: '🏗️', name: 'Burj Khalifa',        detail: 'Dubai, UAE',                  lat: 25.1972,  lon: 55.2744,   label: '🏙️ Modern Marvel' },
-    { icon: '🎭', name: 'Sydney Opera House',  detail: 'Sydney, Australia',           lat: -33.8568, lon: 151.2153,  label: '🎨 Iconic Structure' },
-    { icon: '🕰️', name: 'Big Ben',             detail: 'London, UK',                  lat: 51.5007,  lon: -0.1246,   label: '🏙️ City Icon' },
-    { icon: '🏛️', name: 'Chichen Itza',        detail: 'Mexico',                      lat: 20.6843,  lon: -88.5678,  label: '🏛️ Ancient Marvel' },
-    { icon: '🏰', name: 'Forbidden City',      detail: 'Beijing, China',              lat: 39.9163,  lon: 116.3972,  label: '🏛️ Heritage Site' },
-];
+// Dynamically pull wonder places from PlacesDB — single source of truth
+// Falls back to built-in list if PlacesDB isn't loaded yet
+const WONDER_PLACES = (function() {
+    if (typeof PlacesDB !== 'undefined') {
+        // Pull all wonder-tagged + famous world landmarks from the database
+        const dbWonders = PlacesDB.byTag('wonder');
+        const dbLandmarks = PlacesDB.byTag('famous').filter(p =>
+            p.tags && (p.tags.includes('world') || p.tags.includes('landmark'))
+        );
+        // Merge & deduplicate by name
+        const seen = new Set();
+        const merged = [...dbWonders, ...dbLandmarks].filter(p => {
+            if (seen.has(p.name)) return false;
+            seen.add(p.name);
+            return true;
+        });
+        if (merged.length >= 5) {
+            // Shuffle for variety on each page load
+            for (let i = merged.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [merged[i], merged[j]] = [merged[j], merged[i]];
+            }
+            return merged.map(p => ({
+                icon: p.icon, name: p.name, detail: p.detail,
+                lat: p.lat, lon: p.lon,
+                label: p.tags.includes('ancient wonder') ? '🏛️ Ancient Marvel'
+                     : p.tags.includes('wonder') ? '🌍 World Wonder'
+                     : '🌟 Famous Place'
+            }));
+        }
+    }
+    // Fallback: hardcoded essentials if DB is empty or unavailable
+    return [
+        { icon: '🗼', name: 'Eiffel Tower',       detail: 'Paris, France',          lat: 48.8584,  lon: 2.2945,    label: '🌍 World Wonder' },
+        { icon: '🕌', name: 'Taj Mahal',           detail: 'Agra, India',            lat: 27.1751,  lon: 78.0421,   label: '🌍 World Wonder' },
+        { icon: '🏯', name: 'Great Wall of China', detail: 'Beijing, China',         lat: 40.4319,  lon: 116.5704,  label: '🌍 World Wonder' },
+        { icon: '🔺', name: 'Pyramids of Giza',    detail: 'Cairo, Egypt',           lat: 29.9792,  lon: 31.1342,   label: '🏛️ Ancient Marvel' },
+        { icon: '🏟️', name: 'Colosseum',           detail: 'Rome, Italy',            lat: 41.8902,  lon: 12.4922,   label: '🏛️ Ancient Marvel' },
+    ];
+})();
 
 let _wonderIdx    = 0;
 let _wonderTimer  = null;
