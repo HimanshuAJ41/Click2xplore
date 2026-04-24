@@ -370,6 +370,156 @@ const FAMOUS_PLACES = [
     { name: "Forbidden City", detail: "Beijing, China", lat: 39.9163, lon: 116.3972, type: "Landmark", icon: "🏯" },
     { name: "Hagia Sophia", detail: "Istanbul, Turkey", lat: 41.0086, lon: 28.9802, type: "Landmark", icon: "🕌" },
     { name: "Chichen Itza", detail: "Mexico", lat: 20.6843, lon: -88.5678, type: "Landmark", icon: "🏛️" },
+
+    // ══════════════════════════════════════
+    // MAHARASHTRA — SCHOOLS (Top & Famous)
+    // ══════════════════════════════════════
+    { name: "Cathedral & John Connon School", detail: "Fort, Mumbai, Maharashtra", lat: 18.9322, lon: 72.8347, type: "School", icon: "🏫", tags: ["school", "education", "famous", "heritage"] },
+    { name: "Dhirubhai Ambani International School", detail: "BKC, Mumbai, Maharashtra", lat: 19.0590, lon: 72.8675, type: "School", icon: "🏫", tags: ["school", "education", "famous", "international"] },
+    { name: "Bombay Scottish School", detail: "Mahim, Mumbai, Maharashtra", lat: 19.0395, lon: 72.8416, type: "School", icon: "🏫", tags: ["school", "education", "famous"] },
+    { name: "Jamnabai Narsee School", detail: "Juhu, Mumbai, Maharashtra", lat: 19.1043, lon: 72.8268, type: "School", icon: "🏫", tags: ["school", "education", "famous"] },
+    { name: "Don Bosco High School", detail: "Matunga, Mumbai, Maharashtra", lat: 19.0275, lon: 72.8530, type: "School", icon: "🏫", tags: ["school", "education", "famous"] },
+    { name: "Loyola High School", detail: "Pune, Maharashtra", lat: 18.5063, lon: 73.8258, type: "School", icon: "🏫", tags: ["school", "education", "famous", "pune"] },
+    { name: "The Bishop's School", detail: "Camp, Pune, Maharashtra", lat: 18.5138, lon: 73.8804, type: "School", icon: "🏫", tags: ["school", "education", "famous", "pune", "heritage"] },
+    { name: "Symbiosis International School", detail: "Viman Nagar, Pune, Maharashtra", lat: 18.5679, lon: 73.9143, type: "School", icon: "🏫", tags: ["school", "education", "international", "pune"] },
+    { name: "Abhinav Vidyalay", detail: "Dombivli, Maharashtra", lat: 19.2183, lon: 73.0867, type: "School", icon: "🏫", tags: ["school", "education"] },
+    { name: "St. Mary's School", detail: "Nagpur, Maharashtra", lat: 21.1458, lon: 79.0882, type: "School", icon: "🏫", tags: ["school", "education", "famous", "nagpur"] },
+    { name: "Barnes School", detail: "Nashik, Maharashtra", lat: 19.9975, lon: 73.7898, type: "School", icon: "🏫", tags: ["school", "education", "famous", "nashik", "heritage"] },
+    { name: "New Era High School", detail: "Panchgani, Maharashtra", lat: 17.9254, lon: 73.7987, type: "School", icon: "🏫", tags: ["school", "education", "famous", "hill station", "boarding"] },
+    { name: "Rishi Valley-Inspired Schools", detail: "Satara, Maharashtra", lat: 17.6805, lon: 74.0183, type: "School", icon: "🏫", tags: ["school", "education"] },
+
+    // ══════════════════════════════════════
+    // MAHARASHTRA — COLLEGES & UNIVERSITIES
+    // ══════════════════════════════════════
+    { name: "IIT Bombay", detail: "Powai, Mumbai, Maharashtra", lat: 19.1334, lon: 72.9133, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "iit", "engineering"] },
+    { name: "University of Mumbai", detail: "Fort, Mumbai, Maharashtra", lat: 18.9318, lon: 72.8310, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "heritage"] },
+    { name: "IIM Mumbai (Jamnalal Bajaj)", detail: "Churchgate, Mumbai, Maharashtra", lat: 18.9256, lon: 72.8273, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "business"] },
+    { name: "SNDT Women's University", detail: "Churchgate, Mumbai, Maharashtra", lat: 18.9349, lon: 72.8260, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous"] },
+    { name: "VJTI Mumbai", detail: "Matunga, Mumbai, Maharashtra", lat: 19.0225, lon: 72.8556, type: "College", icon: "🎓", tags: ["college", "university", "education", "engineering", "famous"] },
+    { name: "St. Xavier's College", detail: "Fort, Mumbai, Maharashtra", lat: 18.9389, lon: 72.8313, type: "College", icon: "🎓", tags: ["college", "education", "famous", "heritage"] },
+    { name: "Elphinstone College", detail: "Fort, Mumbai, Maharashtra", lat: 18.9353, lon: 72.8308, type: "College", icon: "🎓", tags: ["college", "education", "famous", "heritage"] },
+    { name: "Savitribai Phule Pune University", detail: "Ganeshkhind, Pune, Maharashtra", lat: 18.5564, lon: 73.8260, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "pune"] },
+    { name: "College of Engineering Pune (COEP)", detail: "Shivajinagar, Pune, Maharashtra", lat: 18.5298, lon: 73.8544, type: "College", icon: "🎓", tags: ["college", "university", "education", "engineering", "famous", "pune", "heritage"] },
+    { name: "Fergusson College", detail: "Pune, Maharashtra", lat: 18.5255, lon: 73.8389, type: "College", icon: "🎓", tags: ["college", "education", "famous", "pune", "heritage"] },
+    { name: "Symbiosis International University", detail: "Lavale, Pune, Maharashtra", lat: 18.4680, lon: 73.7620, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "pune"] },
+    { name: "MIT World Peace University", detail: "Kothrud, Pune, Maharashtra", lat: 18.5130, lon: 73.8089, type: "College", icon: "🎓", tags: ["college", "university", "education", "pune"] },
+    { name: "VNIT Nagpur", detail: "Nagpur, Maharashtra", lat: 21.1260, lon: 79.0515, type: "College", icon: "🎓", tags: ["college", "university", "education", "engineering", "famous", "nagpur"] },
+    { name: "Nagpur University", detail: "Nagpur, Maharashtra", lat: 21.1455, lon: 79.0770, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "nagpur"] },
+    { name: "IIM Nagpur", detail: "Nagpur, Maharashtra", lat: 21.0990, lon: 79.0118, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "business", "nagpur"] },
+    { name: "Dr. Babasaheb Ambedkar Marathwada University", detail: "Aurangabad, Maharashtra", lat: 19.8770, lon: 75.3472, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous"] },
+    { name: "Shivaji University", detail: "Kolhapur, Maharashtra", lat: 16.6799, lon: 74.2502, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous"] },
+    { name: "TISS Mumbai", detail: "Deonar, Mumbai, Maharashtra", lat: 19.0434, lon: 72.9166, type: "College", icon: "🎓", tags: ["college", "university", "education", "famous", "social sciences"] },
+    { name: "Sir JJ School of Art", detail: "Fort, Mumbai, Maharashtra", lat: 18.9406, lon: 72.8357, type: "College", icon: "🎓", tags: ["college", "education", "famous", "art", "heritage"] },
+
+    // ══════════════════════════════════════
+    // MAHARASHTRA — LAKES
+    // ══════════════════════════════════════
+    { name: "Powai Lake", detail: "Powai, Mumbai, Maharashtra", lat: 19.1272, lon: 72.9070, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "mumbai", "scenic"] },
+    { name: "Vihar Lake", detail: "Borivali, Mumbai, Maharashtra", lat: 19.1662, lon: 72.9010, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "mumbai"] },
+    { name: "Tulsi Lake", detail: "Borivali, Mumbai, Maharashtra", lat: 19.2165, lon: 72.9119, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "mumbai"] },
+    { name: "Pashan Lake", detail: "Pashan, Pune, Maharashtra", lat: 18.5258, lon: 73.7988, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "pune", "birdwatching"] },
+    { name: "Khadakwasla Dam Lake", detail: "Pune, Maharashtra", lat: 18.4404, lon: 73.7668, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "pune", "scenic", "dam", "weekend"] },
+    { name: "Mulshi Lake", detail: "Mulshi, Pune, Maharashtra", lat: 18.5060, lon: 73.4800, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "pune", "scenic", "dam", "weekend", "camping"] },
+    { name: "Bhandardara Lake (Arthur Lake)", detail: "Bhandardara, Maharashtra", lat: 19.5446, lon: 73.7663, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "scenic", "camping", "weekend", "hidden gem"] },
+    { name: "Venna Lake", detail: "Mahabaleshwar, Maharashtra", lat: 17.9213, lon: 73.6570, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "scenic", "boating", "famous"] },
+    { name: "Rankala Lake", detail: "Kolhapur, Maharashtra", lat: 16.6890, lon: 74.2275, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "famous", "scenic"] },
+    { name: "Salim Ali Lake", detail: "Aurangabad, Maharashtra", lat: 19.8868, lon: 75.3120, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "birdwatching", "famous"] },
+    { name: "Gorewada Lake", detail: "Nagpur, Maharashtra", lat: 21.1833, lon: 79.0500, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "nagpur", "birdwatching"] },
+    { name: "Ambazari Lake", detail: "Nagpur, Maharashtra", lat: 21.1273, lon: 79.0441, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "nagpur", "scenic"] },
+    { name: "Lonar Crater Lake", detail: "Buldhana, Maharashtra", lat: 19.9756, lon: 76.5069, type: "Lake", icon: "🌋", tags: ["lake", "nature", "hidden gem", "crater", "unique", "geological", "famous"] },
+    { name: "Shivsagar Lake", detail: "Koyna, Maharashtra", lat: 17.3990, lon: 73.7580, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "dam", "scenic", "hidden gem"] },
+    { name: "Gangapur Dam Lake", detail: "Nashik, Maharashtra", lat: 19.9700, lon: 73.7420, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "nashik", "scenic", "dam"] },
+    { name: "Bhatsa River Lake", detail: "Thane, Maharashtra", lat: 19.4570, lon: 73.3940, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "hidden gem", "scenic"] },
+    { name: "Pelhar Lake", detail: "Pelhar, Maharashtra", lat: 19.3220, lon: 72.8560, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "hidden gem", "scenic"] },
+    { name: "Mushi Lake", detail: "Panchgani, Maharashtra", lat: 17.9100, lon: 73.8100, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "hidden gem"] },
+    { name: "Tapola Lake (Mini Kashmir)", detail: "Satara, Maharashtra", lat: 17.7469, lon: 73.7646, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "hidden gem", "boating", "scenic", "adventure", "camping"] },
+    { name: "Temghar Dam Lake", detail: "Pune, Maharashtra", lat: 18.4157, lon: 73.6283, type: "Lake", icon: "🏞️", tags: ["lake", "nature", "pune", "scenic", "dam"] },
+
+    // ══════════════════════════════════════
+    // MAHARASHTRA — RESTAURANTS & FOOD
+    // ══════════════════════════════════════
+    { name: "Leopold Cafe", detail: "Colaba, Mumbai, Maharashtra", lat: 18.9230, lon: 72.8319, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "heritage", "cafe"] },
+    { name: "Britannia & Co.", detail: "Ballard Estate, Mumbai, Maharashtra", lat: 18.9317, lon: 72.8439, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "heritage", "parsi"] },
+    { name: "Bademiya", detail: "Colaba, Mumbai, Maharashtra", lat: 18.9217, lon: 72.8327, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "street food", "kebab"] },
+    { name: "Trishna", detail: "Fort, Mumbai, Maharashtra", lat: 18.9320, lon: 72.8320, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "seafood"] },
+    { name: "Cafe Mondegar", detail: "Colaba, Mumbai, Maharashtra", lat: 18.9247, lon: 72.8317, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "cafe"] },
+    { name: "Mumbai Chowpatty Street Food", detail: "Girgaon Chowpatty, Mumbai", lat: 18.9553, lon: 72.8145, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "street food", "bhelpuri"] },
+    { name: "Vaishali Restaurant", detail: "FC Road, Pune, Maharashtra", lat: 18.5215, lon: 73.8410, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "pune", "south indian"] },
+    { name: "Shreyas Restaurant", detail: "Deccan, Pune, Maharashtra", lat: 18.5166, lon: 73.8408, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "pune", "thali"] },
+    { name: "German Bakery", detail: "Koregaon Park, Pune, Maharashtra", lat: 18.5370, lon: 73.8940, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "pune", "cafe", "bakery"] },
+    { name: "Chitale Bandhu Mithaiwale", detail: "Pune, Maharashtra", lat: 18.5204, lon: 73.8567, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "pune", "sweets", "mithai"] },
+    { name: "Kayani Bakery", detail: "Camp, Pune, Maharashtra", lat: 18.5138, lon: 73.8804, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "pune", "bakery", "heritage"] },
+    { name: "Haldiram's", detail: "Nagpur, Maharashtra", lat: 21.1458, lon: 79.0882, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "nagpur", "sweets", "snacks"] },
+    { name: "Saoji Bhojanalay", detail: "Nagpur, Maharashtra", lat: 21.1500, lon: 79.0800, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "nagpur", "spicy", "local cuisine"] },
+    { name: "Shabree Restaurant", detail: "Nashik, Maharashtra", lat: 20.0000, lon: 73.7900, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "nashik", "thali"] },
+    { name: "Konkan Cafe (Taj)", detail: "Cuffe Parade, Mumbai, Maharashtra", lat: 18.9070, lon: 72.8130, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "konkan", "seafood", "luxury"] },
+    { name: "Mahesh Lunch Home", detail: "Fort, Mumbai, Maharashtra", lat: 18.9350, lon: 72.8350, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai", "seafood"] },
+    { name: "Status Restaurant", detail: "Nariman Point, Mumbai, Maharashtra", lat: 18.9255, lon: 72.8242, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "mumbai"] },
+    { name: "Budhani Wafer Centre", detail: "Mahabaleshwar, Maharashtra", lat: 17.9237, lon: 73.6586, type: "Restaurant", icon: "🍽️", tags: ["restaurant", "food", "famous", "snacks", "chikki"] },
+    { name: "Sula Vineyards", detail: "Nashik, Maharashtra", lat: 20.0020, lon: 73.6900, type: "Restaurant", icon: "🍷", tags: ["restaurant", "food", "famous", "nashik", "wine", "vineyard", "scenic"] },
+    { name: "York Winery & Tasting Room", detail: "Nashik, Maharashtra", lat: 19.9600, lon: 73.6700, type: "Restaurant", icon: "🍷", tags: ["restaurant", "food", "nashik", "wine", "vineyard"] },
+
+    // ══════════════════════════════════════
+    // MAHARASHTRA — MUSEUMS & MARKETS
+    // ══════════════════════════════════════
+    { name: "Chhatrapati Shivaji Maharaj Vastu Sangrahalaya", detail: "Fort, Mumbai, Maharashtra", lat: 18.9268, lon: 72.8326, type: "Museum", icon: "🏛️", tags: ["museum", "heritage", "famous", "mumbai", "art"] },
+    { name: "Dr. Bhau Daji Lad Museum", detail: "Byculla, Mumbai, Maharashtra", lat: 18.9785, lon: 72.8349, type: "Museum", icon: "🏛️", tags: ["museum", "heritage", "famous", "mumbai"] },
+    { name: "Raja Dinkar Kelkar Museum", detail: "Pune, Maharashtra", lat: 18.5117, lon: 73.8557, type: "Museum", icon: "🏛️", tags: ["museum", "heritage", "famous", "pune", "art"] },
+    { name: "Aga Khan Palace", detail: "Pune, Maharashtra", lat: 18.5525, lon: 73.9017, type: "Museum", icon: "🏛️", tags: ["museum", "heritage", "famous", "pune", "gandhi", "monument"] },
+    { name: "Crawford Market", detail: "Fort, Mumbai, Maharashtra", lat: 18.9471, lon: 72.8348, type: "Market", icon: "🛒", tags: ["market", "shopping", "famous", "mumbai", "heritage"] },
+    { name: "Colaba Causeway", detail: "Colaba, Mumbai, Maharashtra", lat: 18.9217, lon: 72.8317, type: "Market", icon: "🛒", tags: ["market", "shopping", "famous", "mumbai"] },
+    { name: "Linking Road Market", detail: "Bandra, Mumbai, Maharashtra", lat: 19.0620, lon: 72.8354, type: "Market", icon: "🛒", tags: ["market", "shopping", "famous", "mumbai"] },
+    { name: "Tulsi Baug", detail: "Pune, Maharashtra", lat: 18.5150, lon: 73.8570, type: "Market", icon: "🛒", tags: ["market", "shopping", "famous", "pune"] },
+    { name: "Mahatma Phule Mandai", detail: "Pune, Maharashtra", lat: 18.5192, lon: 73.8565, type: "Market", icon: "🛒", tags: ["market", "shopping", "famous", "pune", "heritage"] },
+
+    // ══════════════════════════════════════
+    // INDIA — MORE FAMOUS LANDMARKS
+    // ══════════════════════════════════════
+    { name: "Mysore Palace", detail: "Mysore, Karnataka, India", lat: 12.3052, lon: 76.6552, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "palace"] },
+    { name: "Hampi", detail: "Karnataka, India", lat: 15.3350, lon: 76.4600, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "unesco", "ruins"] },
+    { name: "Konark Sun Temple", detail: "Odisha, India", lat: 19.8876, lon: 86.0945, type: "Landmark", icon: "🛕", tags: ["temple", "famous", "heritage", "unesco"] },
+    { name: "Khajuraho Temples", detail: "Madhya Pradesh, India", lat: 24.8318, lon: 79.9199, type: "Landmark", icon: "🛕", tags: ["temple", "famous", "heritage", "unesco"] },
+    { name: "Victoria Memorial", detail: "Kolkata, India", lat: 22.5448, lon: 88.3426, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "monument"] },
+    { name: "Howrah Bridge", detail: "Kolkata, India", lat: 22.5851, lon: 88.3468, type: "Landmark", icon: "🌉", tags: ["landmark", "famous", "bridge"] },
+    { name: "Meenakshi Temple", detail: "Madurai, Tamil Nadu, India", lat: 9.9195, lon: 78.1193, type: "Landmark", icon: "🛕", tags: ["temple", "famous", "heritage"] },
+    { name: "Jaisalmer Fort", detail: "Rajasthan, India", lat: 26.9124, lon: 70.9120, type: "Landmark", icon: "🏰", tags: ["fort", "famous", "heritage", "desert"] },
+    { name: "City Palace Udaipur", detail: "Rajasthan, India", lat: 24.5764, lon: 73.6915, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "palace"] },
+    { name: "Amber Fort", detail: "Jaipur, Rajasthan, India", lat: 26.9855, lon: 75.8513, type: "Landmark", icon: "🏰", tags: ["fort", "famous", "heritage"] },
+    { name: "Lotus Temple", detail: "Delhi, India", lat: 28.5535, lon: 77.2588, type: "Landmark", icon: "🪷", tags: ["temple", "famous", "heritage", "monument"] },
+    { name: "Humayun's Tomb", detail: "Delhi, India", lat: 28.5933, lon: 77.2507, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "unesco", "monument"] },
+    { name: "Jantar Mantar", detail: "Jaipur, Rajasthan, India", lat: 26.9247, lon: 75.8246, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "unesco"] },
+    { name: "Char Minar", detail: "Hyderabad, Telangana, India", lat: 17.3616, lon: 78.4747, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "monument"] },
+    { name: "Golconda Fort", detail: "Hyderabad, Telangana, India", lat: 17.3833, lon: 78.4011, type: "Landmark", icon: "🏰", tags: ["fort", "famous", "heritage"] },
+
+    // ══════════════════════════════════════
+    // WORLD — 7 WONDERS (ANCIENT)
+    // ══════════════════════════════════════
+    { name: "Great Pyramid of Giza", detail: "Giza, Egypt (Ancient Wonder)", lat: 29.9792, lon: 31.1342, type: "Wonder", icon: "🏛️", tags: ["wonder", "ancient wonder", "famous", "heritage", "unesco", "pyramid"] },
+    { name: "Hanging Gardens of Babylon", detail: "Hillah, Iraq (Ancient Wonder — Lost)", lat: 32.5363, lon: 44.4209, type: "Wonder", icon: "🏛️", tags: ["wonder", "ancient wonder", "famous", "lost"] },
+    { name: "Statue of Zeus at Olympia", detail: "Olympia, Greece (Ancient Wonder — Lost)", lat: 37.6388, lon: 21.6300, type: "Wonder", icon: "🏛️", tags: ["wonder", "ancient wonder", "famous", "lost"] },
+    { name: "Temple of Artemis", detail: "Ephesus, Turkey (Ancient Wonder — Ruins)", lat: 37.9497, lon: 27.3638, type: "Wonder", icon: "🏛️", tags: ["wonder", "ancient wonder", "famous", "ruins"] },
+    { name: "Mausoleum at Halicarnassus", detail: "Bodrum, Turkey (Ancient Wonder — Ruins)", lat: 37.0380, lon: 27.4241, type: "Wonder", icon: "🏛️", tags: ["wonder", "ancient wonder", "famous", "ruins"] },
+    { name: "Colossus of Rhodes", detail: "Rhodes, Greece (Ancient Wonder — Lost)", lat: 36.4510, lon: 28.2278, type: "Wonder", icon: "🏛️", tags: ["wonder", "ancient wonder", "famous", "lost"] },
+    { name: "Lighthouse of Alexandria", detail: "Alexandria, Egypt (Ancient Wonder — Lost)", lat: 31.2135, lon: 29.8856, type: "Wonder", icon: "🏛️", tags: ["wonder", "ancient wonder", "famous", "lost"] },
+
+    // ══════════════════════════════════════
+    // WORLD — MORE FAMOUS PLACES
+    // ══════════════════════════════════════
+    { name: "Parthenon", detail: "Athens, Greece", lat: 37.9715, lon: 23.7267, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "ancient"] },
+    { name: "Acropolis", detail: "Athens, Greece", lat: 37.9715, lon: 23.7257, type: "Landmark", icon: "🏛️", tags: ["landmark", "famous", "heritage", "unesco"] },
+    { name: "Sagrada Familia", detail: "Barcelona, Spain", lat: 41.4036, lon: 2.1744, type: "Landmark", icon: "⛪", tags: ["landmark", "famous", "heritage", "church"] },
+    { name: "Neuschwanstein Castle", detail: "Bavaria, Germany", lat: 47.5576, lon: 10.7498, type: "Landmark", icon: "🏰", tags: ["landmark", "famous", "castle", "scenic"] },
+    { name: "Versailles Palace", detail: "Versailles, France", lat: 48.8049, lon: 2.1204, type: "Landmark", icon: "🏰", tags: ["landmark", "famous", "heritage", "palace", "unesco"] },
+    { name: "Tower of London", detail: "London, UK", lat: 51.5081, lon: -0.0759, type: "Landmark", icon: "🏰", tags: ["landmark", "famous", "heritage", "castle"] },
+    { name: "Golden Gate Bridge", detail: "San Francisco, USA", lat: 37.8199, lon: -122.4783, type: "Landmark", icon: "🌉", tags: ["landmark", "famous", "bridge", "scenic"] },
+    { name: "Mount Rushmore", detail: "South Dakota, USA", lat: 43.8791, lon: -103.4591, type: "Landmark", icon: "🏔️", tags: ["landmark", "famous", "monument", "sculpture"] },
+    { name: "Borobudur Temple", detail: "Java, Indonesia", lat: -7.6079, lon: 110.2038, type: "Landmark", icon: "🛕", tags: ["temple", "famous", "heritage", "unesco"] },
+    { name: "Table Mountain", detail: "Cape Town, South Africa", lat: -33.9628, lon: 18.4098, type: "Nature", icon: "🏔️", tags: ["nature", "famous", "scenic", "hiking"] },
+    { name: "Aurora Borealis Zone", detail: "Tromsø, Norway", lat: 69.6492, lon: 18.9553, type: "Nature", icon: "✨", tags: ["nature", "famous", "aurora", "northern lights", "scenic"] },
+    { name: "Victoria Falls", detail: "Zambia/Zimbabwe", lat: -17.9243, lon: 25.8572, type: "Nature", icon: "🌊", tags: ["nature", "famous", "waterfall", "wonder"] },
+    { name: "Dead Sea", detail: "Israel/Jordan", lat: 31.5111, lon: 35.4731, type: "Nature", icon: "🏞️", tags: ["nature", "famous", "lake", "unique"] },
+    { name: "Serengeti National Park", detail: "Tanzania", lat: -2.3333, lon: 34.8333, type: "Nature", icon: "🦁", tags: ["nature", "famous", "wildlife", "safari", "national park"] },
+    { name: "Galápagos Islands", detail: "Ecuador", lat: -0.9538, lon: -90.9656, type: "Nature", icon: "🏝️", tags: ["nature", "famous", "wildlife", "islands", "unesco"] },
 ];
 
 // ══════════════════════════════════════════
@@ -447,6 +597,49 @@ const CATEGORY_KEYWORDS = {
     "unesco": { tags: ["unesco"], label: "🏛️ UNESCO Sites" },
     "cave": { tags: ["cave"], label: "🕳️ Caves" },
     "caves": { tags: ["cave"], label: "🕳️ Caves" },
+
+    // Schools & Education
+    "school": { tags: ["school"], label: "🏫 Schools" },
+    "schools": { tags: ["school"], label: "🏫 Schools" },
+    "college": { tags: ["college"], label: "🎓 Colleges" },
+    "colleges": { tags: ["college"], label: "🎓 Colleges" },
+    "university": { tags: ["university"], label: "🎓 Universities" },
+    "universities": { tags: ["university"], label: "🎓 Universities" },
+    "education": { tags: ["education"], label: "📚 Educational Institutes" },
+    "engineering college": { tags: ["college", "engineering"], label: "🎓 Engineering Colleges" },
+    "engineering colleges": { tags: ["college", "engineering"], label: "🎓 Engineering Colleges" },
+    "iit": { tags: ["iit"], label: "🎓 IITs" },
+
+    // Restaurants & Food
+    "restaurant": { tags: ["restaurant"], label: "🍽️ Restaurants" },
+    "restaurants": { tags: ["restaurant"], label: "🍽️ Restaurants" },
+    "food": { tags: ["food"], label: "🍽️ Food Places" },
+    "cafe": { tags: ["cafe"], label: "☕ Cafes" },
+    "cafes": { tags: ["cafe"], label: "☕ Cafes" },
+    "street food": { tags: ["street food"], label: "🍲 Street Food" },
+    "seafood": { tags: ["seafood"], label: "🐟 Seafood" },
+    "wine": { tags: ["wine"], label: "🍷 Wineries" },
+    "winery": { tags: ["wine"], label: "🍷 Wineries" },
+    "vineyard": { tags: ["vineyard"], label: "🍷 Vineyards" },
+    "bakery": { tags: ["bakery"], label: "🥐 Bakeries" },
+
+    // Museums & Markets
+    "museum": { tags: ["museum"], label: "🏛️ Museums" },
+    "museums": { tags: ["museum"], label: "🏛️ Museums" },
+    "market": { tags: ["market"], label: "🛒 Markets" },
+    "markets": { tags: ["market"], label: "🛒 Markets" },
+    "shopping": { tags: ["shopping"], label: "🛍️ Shopping" },
+
+    // Wonders
+    "wonder": { tags: ["wonder"], label: "🏛️ World Wonders" },
+    "wonders": { tags: ["wonder"], label: "🏛️ World Wonders" },
+    "ancient wonder": { tags: ["ancient wonder"], label: "🏛️ Ancient Wonders" },
+    "ancient wonders": { tags: ["ancient wonder"], label: "🏛️ Ancient Wonders" },
+
+    // Boating & Dams
+    "boating": { tags: ["boating"], label: "🚣 Boating" },
+    "dam": { tags: ["dam"], label: "🏞️ Dams" },
+    "dams": { tags: ["dam"], label: "🏞️ Dams" },
 };
 
 /**
@@ -484,3 +677,73 @@ function searchByCategory(query) {
         isCategory: true
     };
 }
+
+// ══════════════════════════════════════════
+// PlacesDB — Easy-access utility for fetching data anywhere in the codebase
+// Usage: PlacesDB.byType('Lake'), PlacesDB.near(lat, lon, 50), etc.
+// ══════════════════════════════════════════
+const PlacesDB = {
+    /** Get all places */
+    all() { return FAMOUS_PLACES; },
+
+    /** Total count */
+    count() { return FAMOUS_PLACES.length; },
+
+    /** Filter by type (case-insensitive): PlacesDB.byType('School') */
+    byType(type) {
+        const t = type.toLowerCase();
+        return FAMOUS_PLACES.filter(p => p.type.toLowerCase() === t);
+    },
+
+    /** Filter by tag: PlacesDB.byTag('famous') */
+    byTag(tag) {
+        const t = tag.toLowerCase();
+        return FAMOUS_PLACES.filter(p => p.tags && p.tags.includes(t));
+    },
+
+    /** Filter by multiple tags (AND): PlacesDB.byTags(['lake', 'hidden gem']) */
+    byTags(tags) {
+        return FAMOUS_PLACES.filter(p => {
+            if (!p.tags) return false;
+            return tags.every(t => p.tags.includes(t.toLowerCase()));
+        });
+    },
+
+    /** Find nearby places within `radiusKm`: PlacesDB.near(19.07, 72.87, 30) */
+    near(lat, lon, radiusKm = 50) {
+        const R = 6371;
+        const toRad = d => d * Math.PI / 180;
+        return FAMOUS_PLACES
+            .map(p => {
+                const dLat = toRad(p.lat - lat);
+                const dLon = toRad(p.lon - lon);
+                const a = Math.sin(dLat / 2) ** 2 +
+                          Math.cos(toRad(lat)) * Math.cos(toRad(p.lat)) *
+                          Math.sin(dLon / 2) ** 2;
+                const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return { ...p, distance: Math.round(dist * 10) / 10 };
+            })
+            .filter(p => p.distance <= radiusKm)
+            .sort((a, b) => a.distance - b.distance);
+    },
+
+    /** Quick name search (fuzzy): PlacesDB.search('powai') */
+    search(query) {
+        const q = query.toLowerCase();
+        return FAMOUS_PLACES.filter(p =>
+            p.name.toLowerCase().includes(q) ||
+            p.detail.toLowerCase().includes(q) ||
+            (p.tags && p.tags.some(t => t.includes(q)))
+        );
+    },
+
+    /** Get all unique types */
+    types() {
+        return [...new Set(FAMOUS_PLACES.map(p => p.type))].sort();
+    },
+
+    /** Category search wrapper */
+    category(query) {
+        return searchByCategory(query);
+    }
+};

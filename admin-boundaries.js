@@ -41,11 +41,11 @@ const ProgressiveAdminBoundaries = {
         this._loading = true;
         try {
             await this._loadCountries();
-            this.updateVisibility();
+            this.updateVisibility(true);
             await this._loadAdmin1();
-            this.updateVisibility();
+            this.updateVisibility(true);
             await this._loadPlaces();
-            this.updateVisibility();
+            this.updateVisibility(true);
         } catch (e) {
             console.warn('ProgressiveAdminBoundaries:', e);
         } finally {
@@ -67,11 +67,11 @@ const ProgressiveAdminBoundaries = {
             `${NE_GEOJSON_BASE}/ne_110m_admin_0_boundary_lines_land.geojson`,
             {
                 stroke,
-                strokeWidth: 1.8,
+                strokeWidth: 2.5,
                 clampToGround: true
             }
         );
-        this._widenPolylines(this._countries, 2);
+        this._widenPolylines(this._countries, 3.5);
         await this.viewer.dataSources.add(this._countries);
 
         const cj = await this._fetchGeoJson(`${NE_GEOJSON_BASE}/ne_10m_admin_0_label_points.geojson`);
@@ -82,9 +82,9 @@ const ProgressiveAdminBoundaries = {
         });
         this._countryLabels = await Cesium.GeoJsonDataSource.load(cj, { clampToGround: true });
         this._convertPointsToLabels(this._countryLabels, {
-            font: '600 13px Outfit,sans-serif',
-            minScale: 0.45,
-            maxScale: 1.15,
+            font: '700 16px Outfit,sans-serif',
+            minScale: 0.8,
+            maxScale: 1.6,
             near: 4e5,
             far: 2.2e7
         }, (e) => _neProp(e, 'NAME') || _neProp(e, 'ADMIN') || '');
@@ -100,11 +100,11 @@ const ProgressiveAdminBoundaries = {
             `${NE_GEOJSON_BASE}/ne_50m_admin_1_states_provinces_lines.geojson`,
             {
                 stroke,
-                strokeWidth: 1,
+                strokeWidth: 2,
                 clampToGround: true
             }
         );
-        this._widenPolylines(this._admin1, 1.5);
+        this._widenPolylines(this._admin1, 2.5);
         await this.viewer.dataSources.add(this._admin1);
 
         const aj = await this._fetchGeoJson(`${NE_GEOJSON_BASE}/ne_10m_admin_1_label_points.geojson`);
@@ -115,9 +115,9 @@ const ProgressiveAdminBoundaries = {
         });
         this._admin1Labels = await Cesium.GeoJsonDataSource.load(aj, { clampToGround: true });
         this._convertPointsToLabels(this._admin1Labels, {
-            font: '500 11px Outfit,sans-serif',
-            minScale: 0.35,
-            maxScale: 0.95,
+            font: '600 14px Outfit,sans-serif',
+            minScale: 0.75,
+            maxScale: 1.4,
             near: 8e4,
             far: 4e6
         }, (e) => _neProp(e, 'name') || _neProp(e, 'NAME') || _neProp(e, 'abbrev') || '');
@@ -158,15 +158,15 @@ const ProgressiveAdminBoundaries = {
             if (name) {
                 entity.label = new Cesium.LabelGraphics({
                     text: name,
-                    font: '500 10px Outfit,sans-serif',
-                    fillColor: Cesium.Color.WHITE.withAlpha(0.88),
-                    outlineColor: Cesium.Color.BLACK.withAlpha(0.55),
-                    outlineWidth: 3,
+                    font: '600 13px Outfit,sans-serif',
+                    fillColor: Cesium.Color.WHITE.withAlpha(0.95),
+                    outlineColor: Cesium.Color.BLACK.withAlpha(0.65),
+                    outlineWidth: 4,
                     style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                     verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                    pixelOffset: new Cesium.Cartesian2(0, -8),
+                    pixelOffset: new Cesium.Cartesian2(0, -10),
                     heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                    scaleByDistance: new Cesium.NearFarScalar(8e3, 1.0, 2.5e5, 0.35),
+                    scaleByDistance: new Cesium.NearFarScalar(8e3, 1.2, 2.5e5, 0.6),
                     distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3.2e5)
                 });
             }
@@ -240,7 +240,7 @@ const ProgressiveAdminBoundaries = {
         }
     },
 
-    updateVisibility() {
+    updateVisibility(force = false) {
         if (!this.viewer) return;
         const h = this.viewer.camera.positionCartographic.height;
         const tier =
@@ -252,7 +252,7 @@ const ProgressiveAdminBoundaries = {
             h > 3.2e5 ? 'city-major' :
             h > 1.5e5 ? 'city-mid' :
             h > 7e4 ? 'city-local' : 'street';
-        if (tier === this._lastVisibilityTier) return;
+        if (!force && tier === this._lastVisibilityTier) return;
         this._lastVisibilityTier = tier;
 
         // Country outlines: visible globally but softened at very high altitude
@@ -266,19 +266,19 @@ const ProgressiveAdminBoundaries = {
         this._setLineOpacity(this._countries, this._countryLineColor, countryAlpha);
 
         // Country names: hide at first-look globe, show on closer regional view
-        const showCountryLabels = h > 1.8e6 && h < 8e6;
+        const showCountryLabels = h > 8e5 && h < 5e6;
         if (this._countryLabels) this._countryLabels.show = showCountryLabels;
 
         // States / provinces: only once user starts zooming in
-        const showAdmin1Lines = h > 1.4e5 && h < 2.2e6;
+        const showAdmin1Lines = h > 8e4 && h < 1.2e6;
         if (this._admin1) this._admin1.show = showAdmin1Lines;
         const adminAlpha =
-            h > 1.8e6 ? 0.12 :
-            h > 7e5 ? 0.20 :
-            h > 3.2e5 ? 0.28 : 0.38;
+            h > 1.0e6 ? 0.10 :
+            h > 5e5 ? 0.18 :
+            h > 2e5 ? 0.28 : 0.40;
         this._setLineOpacity(this._admin1, this._adminLineColor, adminAlpha);
 
-        const showAdmin1Labels = h > 2.2e5 && h < 1.1e6;
+        const showAdmin1Labels = h > 1.2e5 && h < 8e5;
         if (this._admin1Labels) this._admin1Labels.show = showAdmin1Labels;
 
         // Cities / towns: keep startup globe clean, reveal details progressively

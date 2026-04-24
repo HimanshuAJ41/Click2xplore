@@ -976,15 +976,19 @@ body {
 
 .nav-panel {
     position: fixed;
-    top: 80px;
-    left: 20px;
-    width: 360px;
-    max-height: calc(100vh - 160px);
+    top: 70px;
+    left: 14px;
+    width: clamp(310px, 27vw, 420px);
+    max-height: calc(100vh - 126px);
     z-index: 500;
-    border-radius: var(--radius-xl);
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 80px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+    background: linear-gradient(135deg, rgba(15,15,30,0.85), rgba(20,10,40,0.8));
+    backdrop-filter: blur(24px) saturate(1.4);
     opacity: 0;
     transform: translateX(calc(-100% - 30px));
-    transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.3s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
     display: flex;
     flex-direction: column;
@@ -1038,10 +1042,21 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border-glass);
+    padding: 14px 18px;
+    border-bottom: none;
     cursor: pointer;
     user-select: none;
+    position: relative;
+    background: linear-gradient(135deg, rgba(15,15,30,0.92), rgba(20,10,40,0.9));
+    flex-shrink: 0;
+}
+
+.nav-header::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #6366f1);
+    background-size: 300% 100%;
+    animation: ip-gradient-shift 4s ease infinite;
 }
 
 .nav-header-left {
@@ -1055,8 +1070,13 @@ body {
 }
 
 .nav-title-text {
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #a78bfa 40%, #f0abfc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .nav-header-right {
@@ -1134,22 +1154,23 @@ body {
 }
 
 .start-nav-btn-mini {
-    padding: 7px 16px;
-    background: #4285F4;
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
     color: white;
     border: none;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    font-size: 0.8rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
     cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
+    transition: all 0.25s;
     white-space: nowrap;
     flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
 }
 
 .start-nav-btn-mini:hover {
-    background: #1a73e8;
-    transform: scale(1.03);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
 }
 
 /* Endpoints */
@@ -1211,22 +1232,25 @@ body {
 
 .nav-input {
     flex: 1;
-    padding: 9px 12px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--border-glass);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-size: 0.82rem;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+    font-weight: 500;
     font-family: inherit;
     outline: none;
-    transition: border-color 0.2s, background 0.2s;
+    transition: all 0.25s;
     cursor: default;
     min-width: 0;
+    backdrop-filter: blur(4px);
 }
 
 .nav-input:focus {
-    border-color: #4285F4;
-    background: rgba(66, 133, 244, 0.06);
+    border-color: rgba(168, 85, 247, 0.5);
+    background: rgba(168, 85, 247, 0.08);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
 }
 
 /* Pick-on-map button */
@@ -1321,47 +1345,120 @@ body {
 /* Transport modes */
 .nav-modes {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     padding: 8px 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .mode-btn {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 52px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 8px 4px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-glass);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
+    gap: 4px;
+    padding: 10px 4px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
-    transition: all 0.2s;
-    font-size: 1rem;
+    transition: all 0.25s;
+    font-size: 1.1rem;
+    backdrop-filter: blur(4px);
 }
 
 .mode-btn span {
-    font-size: 0.58rem;
+    font-size: 0.6rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.5px;
 }
 
 .mode-btn:hover:not(.unavailable) {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .mode-btn.active {
-    background: rgba(66, 133, 244, 0.2);
-    border-color: #4285F4;
-    color: #4285F4;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+    border-color: rgba(168, 85, 247, 0.5);
+    color: #e0e7ff;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);
+}
+
+.mode-btn[data-mode="train"].active {
+    background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(103, 58, 183, 0.2));
+    border-color: rgba(156, 39, 176, 0.5);
+    color: #f3e5f5;
+    box-shadow: 0 4px 15px rgba(156, 39, 176, 0.25);
+}
+
+.mode-btn[data-mode="bus"].active {
+    background: linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(156, 39, 176, 0.2));
+    border-color: rgba(233, 30, 99, 0.5);
+    color: #fce4ec;
+    box-shadow: 0 4px 15px rgba(233, 30, 99, 0.25);
+}
+
+.mode-btn[data-mode="flight"].active {
+    background: linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(3, 169, 244, 0.2));
+    border-color: rgba(0, 188, 212, 0.5);
+    color: #e0f7fa;
+    box-shadow: 0 4px 15px rgba(0, 188, 212, 0.25);
 }
 
 .mode-btn.unavailable {
     opacity: 0.35;
     cursor: not-allowed;
+}
+
+/* Transit note & app links */
+.transit-note {
+    font-style: normal !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.75rem !important;
+    padding: 4px 0 !important;
+}
+
+.transit-app-links {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 8px 0;
+}
+
+.transit-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(4px);
+}
+
+.transit-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(168, 85, 247, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.15);
+}
+
+.transit-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
 }
 
 /* Route info */
@@ -1443,22 +1540,26 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 12px;
-    margin-bottom: 5px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-glass);
-    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
+    transition: all 0.25s;
+    backdrop-filter: blur(4px);
 }
 
 .route-option-card:hover {
     background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(168, 85, 247, 0.3);
+    transform: translateY(-2px);
 }
 
 .route-option-card.selected {
-    background: rgba(66, 133, 244, 0.14);
-    border-color: #4285F4;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+    border-color: rgba(168, 85, 247, 0.6);
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2);
 }
 
 .route-option-left {
